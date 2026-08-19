@@ -1,0 +1,5 @@
+SOURCE_REPO=o-some/tulasisland
+SOURCE_COMMIT=892f676fbcef77ab49373aef7865d60afba0ebb7
+SOURCE_PATHS=word-scramble/,word-scramble-preview/
+ROLLBACK_BRANCH=backup/pre-extraction-word-scramble-20260819
+MIGRATION_STANDARD=TULAS_ISLAND_SPIELE_REPO_MIGRATION_CODEX_HANDOFF_v2_10von10.md
