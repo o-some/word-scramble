@@ -239,12 +239,30 @@ gameFrame.addEventListener('load',()=>{
           if(!img)return;
           const level=getBossLevel();
           const desired=bossSprites[level-1];
-          if(img.dataset.wsBossSprite!==desired){
+          if(!img.dataset.wsOriginalSrc){
+            img.dataset.wsOriginalSrc=img.getAttribute('src')||'';
+          }
+          img.alt=bossNames[level-1];
+          img.loading='eager';
+          img.decoding='async';
+
+          if(level===1){
+            img.dataset.wsBossSprite='original-level-1';
+            img.onerror=null;
+          }else if(img.dataset.wsBossSprite!==desired){
+            const original=img.dataset.wsOriginalSrc;
             img.dataset.wsBossSprite=desired;
-            img.alt=bossNames[level-1];
-            img.loading='eager';
-            img.decoding='async';
+            img.onerror=()=>{
+              if(original&&img.getAttribute('src')!==original){
+                img.onerror=null;
+                img.dataset.wsBossSprite='fallback-original';
+                img.src=original;
+              }
+            };
             img.src=desired;
+          }
+
+          if(!img.classList.contains('ws-boss-enter')){
             img.classList.remove('ws-boss-enter');
             void img.offsetWidth;
             img.classList.add('ws-boss-enter');
