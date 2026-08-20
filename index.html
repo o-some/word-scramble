@@ -23,7 +23,7 @@ gameFrame.addEventListener('load',()=>{
       const fixSelectedLetters=()=>{
         document.querySelectorAll('.slots .slot').forEach((slot,i)=>{
           const selected=s.sel[i];
-          if(selected&&typeof selected==='object'&&typeof selected.l==='string'){
+          if(selected&&typeof selected==='object'&&typeof selected.l==='string'&&slot.textContent!==selected.l){
             slot.textContent=selected.l;
           }
         });
