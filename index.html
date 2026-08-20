@@ -16,24 +16,129 @@ const gameFrame=document.getElementById('game');
 gameFrame.addEventListener('load',()=>{
   try{
     const doc=gameFrame.contentDocument;
-    if(!doc||doc.getElementById('word-scramble-letter-render-fix'))return;
-    const patch=doc.createElement('script');
-    patch.id='word-scramble-letter-render-fix';
-    patch.textContent=`(()=>{
-      const fixSelectedLetters=()=>{
-        document.querySelectorAll('.slots .slot').forEach((slot,i)=>{
-          const selected=s.sel[i];
-          if(selected&&typeof selected==='object'&&typeof selected.l==='string'&&slot.textContent!==selected.l){
-            slot.textContent=selected.l;
+    if(!doc)return;
+
+    if(!doc.getElementById('word-scramble-success-sparkle-style')){
+      const style=doc.createElement('style');
+      style.id='word-scramble-success-sparkle-style';
+      style.textContent=`
+        .ws-tula-sparkle-layer{
+          position:absolute;
+          inset:0;
+          z-index:7;
+          overflow:visible;
+          pointer-events:none;
+        }
+        .ws-tula-sparkle-layer::before{
+          content:"";
+          position:absolute;
+          left:50%;
+          bottom:108px;
+          width:150px;
+          height:150px;
+          border-radius:50%;
+          background:radial-gradient(circle,rgba(255,225,138,.22),rgba(121,217,199,.09) 34%,transparent 68%);
+          transform:translate(-50%,50%) scale(.7);
+          opacity:0;
+          animation:wsTulaSuccessGlow .72s ease-out forwards;
+        }
+        .ws-tula-sparkle{
+          position:absolute;
+          left:50%;
+          bottom:108px;
+          font-size:14px;
+          line-height:1;
+          opacity:0;
+          will-change:transform,opacity;
+          text-shadow:0 0 9px currentColor,0 2px 3px rgba(0,0,0,.28);
+          animation:wsTulaSparkBurst .72s ease-out forwards;
+        }
+        @keyframes wsTulaSuccessGlow{
+          0%{opacity:0;transform:translate(-50%,50%) scale(.68)}
+          28%{opacity:1;transform:translate(-50%,50%) scale(1)}
+          100%{opacity:0;transform:translate(-50%,50%) scale(1.12)}
+        }
+        @keyframes wsTulaSparkBurst{
+          0%{opacity:0;transform:translate(-50%,0) scale(.42) rotate(0deg)}
+          12%{opacity:1}
+          100%{opacity:0;transform:translate(calc(-50% + var(--dx)),var(--dy)) scale(1.08) rotate(var(--rot))}
+        }
+        @media(prefers-reduced-motion:reduce){
+          .ws-tula-sparkle,.ws-tula-sparkle-layer::before{animation-duration:.12s!important}
+        }
+      `;
+      doc.head.appendChild(style);
+    }
+
+    if(!doc.getElementById('word-scramble-letter-render-fix')){
+      const patch=doc.createElement('script');
+      patch.id='word-scramble-letter-render-fix';
+      patch.textContent=`(()=>{
+        const fixSelectedLetters=()=>{
+          document.querySelectorAll('.slots .slot').forEach((slot,i)=>{
+            const selected=s.sel[i];
+            if(selected&&typeof selected==='object'&&typeof selected.l==='string'&&slot.textContent!==selected.l){
+              slot.textContent=selected.l;
+            }
+          });
+        };
+
+        const sparkleVectors=[
+          [-70,-30,-22],[-58,-62,-12],[-34,-86,10],[-8,-98,-8],
+          [22,-92,14],[48,-72,22],[68,-42,28],[-72,4,-18],
+          [70,0,18],[-50,24,-10],[48,20,12],[2,-112,4]
+        ];
+        let sparkleShownForCurrentSuccess=false;
+
+        const showSuccessSparkles=()=>{
+          const correct=Boolean(!s.boss&&s.feedback&&s.feedback.ok);
+          if(!correct){
+            sparkleShownForCurrentSuccess=false;
+            return;
           }
-        });
-      };
-      const target=document.getElementById('game');
-      if(target){new MutationObserver(fixSelectedLetters).observe(target,{childList:true,subtree:true});}
-      fixSelectedLetters();
-    })();`;
-    doc.documentElement.appendChild(patch);
-  }catch(err){console.error('Word Scramble letter render fix failed',err);}
+          if(sparkleShownForCurrentSuccess)return;
+
+          const side=document.querySelector('.side:not(.bossSide)');
+          if(!side)return;
+
+          sparkleShownForCurrentSuccess=true;
+          const layer=document.createElement('div');
+          layer.className='ws-tula-sparkle-layer';
+          layer.setAttribute('aria-hidden','true');
+
+          sparkleVectors.forEach(([dx,dy,rot],i)=>{
+            const sparkle=document.createElement('span');
+            sparkle.className='ws-tula-sparkle';
+            sparkle.textContent=i%3===1?'✧':'✦';
+            sparkle.style.setProperty('--dx',dx+'px');
+            sparkle.style.setProperty('--dy',dy+'px');
+            sparkle.style.setProperty('--rot',rot+'deg');
+            sparkle.style.color=['#ffe18a','#fff3d0','#79d9c7'][i%3];
+            sparkle.style.fontSize=(10+(i%4)*2)+'px';
+            sparkle.style.animationDelay=(i%4)*18+'ms';
+            layer.appendChild(sparkle);
+          });
+
+          side.appendChild(layer);
+          setTimeout(()=>layer.remove(),850);
+        };
+
+        const applyWordScramblePatches=()=>{
+          fixSelectedLetters();
+          showSuccessSparkles();
+        };
+
+        const target=document.getElementById('game');
+        if(target){
+          new MutationObserver(applyWordScramblePatches).observe(target,{childList:true,subtree:true});
+        }
+        applyWordScramblePatches();
+      })();`;
+      doc.documentElement.appendChild(patch);
+    }
+  }catch(err){
+    console.error('Word Scramble patch failed',err);
+  }
 });
 </script>
 </body>
