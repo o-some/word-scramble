@@ -10,7 +10,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#032f50}ifr
 </style>
 </head>
 <body>
-<iframe id="game" title="Word Scramble" allow="fullscreen; autoplay" src="https://o-some.github.io/tulasisland/word-scramble-preview/?letter-render-fix=1" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+<iframe id="game" title="Word Scramble" allow="fullscreen; autoplay" src="https://o-some.github.io/tulasisland/word-scramble-preview/?letter-render-fix=1&boss-sprite-fix=1" referrerpolicy="strict-origin-when-cross-origin"></iframe>
 <script>
 const gameFrame=document.getElementById('game');
 gameFrame.addEventListener('load',()=>{
@@ -70,6 +70,84 @@ gameFrame.addEventListener('load',()=>{
       doc.head.appendChild(style);
     }
 
+    if(!doc.getElementById('word-scramble-boss-polish-style')){
+      const bossStyle=doc.createElement('style');
+      bossStyle.id='word-scramble-boss-polish-style';
+      bossStyle.textContent=`
+        .bossSide{overflow:visible!important;isolation:isolate}
+        .bossImg{
+          width:132px!important;
+          max-width:150%!important;
+          height:auto!important;
+          max-height:315px!important;
+          object-fit:contain!important;
+          object-position:center bottom!important;
+          transform-origin:50% 92%!important;
+          filter:drop-shadow(0 18px 16px rgba(0,0,0,.58)) drop-shadow(0 0 8px rgba(239,199,102,.18));
+          will-change:transform,filter,opacity;
+        }
+        .bossImg.ws-boss-enter{animation:wsBossEnter .62s cubic-bezier(.18,.86,.24,1) both}
+        .bossImg.ws-boss-hit{animation:wsBossHit .68s cubic-bezier(.2,.82,.24,1) both}
+        .bossImg.ws-boss-laugh{animation:wsBossLaugh .76s cubic-bezier(.2,.88,.22,1) both}
+        .bossSide.ws-boss-hit-stage::after,.bossSide.ws-boss-laugh-stage::after{
+          content:"";
+          position:absolute;
+          z-index:-1;
+          left:50%;
+          bottom:78px;
+          width:155px;
+          height:155px;
+          border-radius:50%;
+          transform:translate(-50%,50%) scale(.68);
+          pointer-events:none;
+          opacity:0;
+        }
+        .bossSide.ws-boss-hit-stage::after{
+          background:radial-gradient(circle,rgba(255,105,95,.30),rgba(255,196,95,.11) 35%,transparent 70%);
+          animation:wsBossHitPulse .7s ease-out both;
+        }
+        .bossSide.ws-boss-laugh-stage::after{
+          background:radial-gradient(circle,rgba(255,225,138,.31),rgba(121,217,199,.10) 36%,transparent 72%);
+          animation:wsBossLaughPulse .78s ease-out both;
+        }
+        @keyframes wsBossEnter{
+          0%{opacity:0;transform:translateY(18px) scale(.88);filter:drop-shadow(0 8px 10px rgba(0,0,0,.35)) brightness(.88)}
+          65%{opacity:1;transform:translateY(-4px) scale(1.025)}
+          100%{opacity:1;transform:translateY(0) scale(1)}
+        }
+        @keyframes wsBossHit{
+          0%{transform:translate(0,0) rotate(0) scale(1)}
+          20%{transform:translate(-7px,3px) rotate(-5deg) scale(.965);filter:drop-shadow(0 18px 16px rgba(0,0,0,.58)) drop-shadow(0 0 17px rgba(255,104,88,.46)) brightness(.92)}
+          42%{transform:translate(6px,-3px) rotate(3deg) scale(1.018)}
+          62%{transform:translate(-4px,1px) rotate(-2deg) scale(.99)}
+          82%{transform:translate(2px,-1px) rotate(1deg) scale(1.006)}
+          100%{transform:translate(0,0) rotate(0) scale(1)}
+        }
+        @keyframes wsBossLaugh{
+          0%{transform:translateY(0) rotate(0) scale(1)}
+          22%{transform:translateY(-11px) rotate(3deg) scale(1.045);filter:drop-shadow(0 18px 16px rgba(0,0,0,.58)) drop-shadow(0 0 18px rgba(255,224,132,.42)) brightness(1.06)}
+          44%{transform:translateY(0) rotate(-3deg) scale(1.018)}
+          66%{transform:translateY(-7px) rotate(2deg) scale(1.035)}
+          84%{transform:translateY(-1px) rotate(-1deg) scale(1.012)}
+          100%{transform:translateY(0) rotate(0) scale(1)}
+        }
+        @keyframes wsBossHitPulse{
+          0%{opacity:0;transform:translate(-50%,50%) scale(.55)}
+          28%{opacity:1;transform:translate(-50%,50%) scale(.92)}
+          100%{opacity:0;transform:translate(-50%,50%) scale(1.18)}
+        }
+        @keyframes wsBossLaughPulse{
+          0%{opacity:0;transform:translate(-50%,50%) scale(.62)}
+          32%{opacity:1;transform:translate(-50%,50%) scale(1)}
+          100%{opacity:0;transform:translate(-50%,50%) scale(1.16)}
+        }
+        @media(prefers-reduced-motion:reduce){
+          .bossImg.ws-boss-enter,.bossImg.ws-boss-hit,.bossImg.ws-boss-laugh,.bossSide.ws-boss-hit-stage::after,.bossSide.ws-boss-laugh-stage::after{animation-duration:.12s!important}
+        }
+      `;
+      doc.head.appendChild(bossStyle);
+    }
+
     if(!doc.getElementById('word-scramble-letter-render-fix')){
       const patch=doc.createElement('script');
       patch.id='word-scramble-letter-render-fix';
@@ -123,9 +201,93 @@ gameFrame.addEventListener('load',()=>{
           setTimeout(()=>layer.remove(),850);
         };
 
+        const bossSprites=[
+          'https://o-some.github.io/word-scramble/assets/bosses/level-01-pirat-kai.webp',
+          'https://o-some.github.io/word-scramble/assets/bosses/level-02-kapitaen-brax.webp',
+          'https://o-some.github.io/word-scramble/assets/bosses/level-03-blackfinn.webp',
+          'https://o-some.github.io/word-scramble/assets/bosses/level-04-alt-kapitaen-roderick.webp',
+          'https://o-some.github.io/word-scramble/assets/bosses/level-05-piratenbaron-vargas.webp',
+          'https://o-some.github.io/word-scramble/assets/bosses/level-06-kapitaen-ironhook.webp',
+          'https://o-some.github.io/word-scramble/assets/bosses/level-07-admiral-thorne.webp',
+          'https://o-some.github.io/word-scramble/assets/bosses/level-08-kartenmeister-corvin.webp',
+          'https://o-some.github.io/word-scramble/assets/bosses/level-09-schattenfuerst-azrak.webp',
+          'https://o-some.github.io/word-scramble/assets/bosses/level-10-piratenkoenig-varkos.webp'
+        ];
+        const bossNames=[
+          'Pirat Kai','Kapitän Brax','Blackfinn','Alt-Kapitän Roderick','Piratenbaron Vargas',
+          'Kapitän Ironhook','Admiral Thorne','Kartenmeister Corvin','Schattenfürst Azrak','Piratenkönig Varkos'
+        ];
+        let lastBossReaction='';
+
+        const getBossLevel=()=>{
+          if(typeof s.bossIndex==='number'&&Number.isFinite(s.bossIndex)){
+            return Math.max(1,Math.min(10,Math.floor(s.bossIndex)+1));
+          }
+          const plate=document.querySelector('.bossPlate');
+          const text=(plate&&plate.textContent?plate.textContent:'').toUpperCase();
+          const match=text.match(/LEVEL ([0-9]+)/);
+          if(match){
+            const level=parseInt(match[1],10);
+            if(level>=1&&level<=10)return level;
+          }
+          return 1;
+        };
+
+        const syncBossSprite=()=>{
+          if(!s.boss)return;
+          const img=document.querySelector('.bossImg');
+          if(!img)return;
+          const level=getBossLevel();
+          const desired=bossSprites[level-1];
+          if(img.dataset.wsBossSprite!==desired){
+            img.dataset.wsBossSprite=desired;
+            img.alt=bossNames[level-1];
+            img.loading='eager';
+            img.decoding='async';
+            img.src=desired;
+            img.classList.remove('ws-boss-enter');
+            void img.offsetWidth;
+            img.classList.add('ws-boss-enter');
+          }
+        };
+
+        const syncBossReaction=()=>{
+          const img=document.querySelector('.bossImg');
+          const side=document.querySelector('.bossSide');
+          if(!s.boss||!img||!side||!s.feedback){
+            lastBossReaction='';
+            if(img)img.classList.remove('ws-boss-hit','ws-boss-laugh');
+            if(side)side.classList.remove('ws-boss-hit-stage','ws-boss-laugh-stage');
+            return;
+          }
+
+          const reaction=s.feedback.ok?'hit':'laugh';
+          if(reaction===lastBossReaction)return;
+          lastBossReaction=reaction;
+
+          img.classList.remove('ws-boss-hit','ws-boss-laugh');
+          side.classList.remove('ws-boss-hit-stage','ws-boss-laugh-stage');
+          void img.offsetWidth;
+
+          if(reaction==='hit'){
+            img.classList.add('ws-boss-hit');
+            side.classList.add('ws-boss-hit-stage');
+          }else{
+            img.classList.add('ws-boss-laugh');
+            side.classList.add('ws-boss-laugh-stage');
+          }
+
+          setTimeout(()=>{
+            img.classList.remove('ws-boss-hit','ws-boss-laugh');
+            side.classList.remove('ws-boss-hit-stage','ws-boss-laugh-stage');
+          },820);
+        };
+
         const applyWordScramblePatches=()=>{
           fixSelectedLetters();
           showSuccessSparkles();
+          syncBossSprite();
+          syncBossReaction();
         };
 
         const target=document.getElementById('game');
