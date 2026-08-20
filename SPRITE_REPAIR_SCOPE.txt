@@ -1,0 +1,1 @@
+Boss sprite repair only. No gameplay/layout changes. Source PNGs: Level 1-10 transparent originals from current project workspace. Target: assets/bosses/*.webp.
