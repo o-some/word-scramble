@@ -10,6 +10,31 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#032f50}ifr
 </style>
 </head>
 <body>
-<iframe id="game" title="Word Scramble" allow="fullscreen; autoplay" src="https://o-some.github.io/tulasisland/word-scramble/" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+<iframe id="game" title="Word Scramble" allow="fullscreen; autoplay" src="https://o-some.github.io/tulasisland/word-scramble-preview/?letter-render-fix=1" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+<script>
+const gameFrame=document.getElementById('game');
+gameFrame.addEventListener('load',()=>{
+  try{
+    const doc=gameFrame.contentDocument;
+    if(!doc||doc.getElementById('word-scramble-letter-render-fix'))return;
+    const patch=doc.createElement('script');
+    patch.id='word-scramble-letter-render-fix';
+    patch.textContent=`(()=>{
+      const fixSelectedLetters=()=>{
+        document.querySelectorAll('.slots .slot').forEach((slot,i)=>{
+          const selected=s.sel[i];
+          if(selected&&typeof selected==='object'&&typeof selected.l==='string'){
+            slot.textContent=selected.l;
+          }
+        });
+      };
+      const target=document.getElementById('game');
+      if(target){new MutationObserver(fixSelectedLetters).observe(target,{childList:true,subtree:true});}
+      fixSelectedLetters();
+    })();`;
+    doc.documentElement.appendChild(patch);
+  }catch(err){console.error('Word Scramble letter render fix failed',err);}
+});
+</script>
 </body>
 </html>
