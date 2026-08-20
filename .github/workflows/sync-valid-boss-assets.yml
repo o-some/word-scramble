@@ -1,0 +1,72 @@
+name: Sync valid boss assets
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'BOSS_ASSET_SYNC_TRIGGER'
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Download and validate the ten proven boss sprites
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p assets/bosses
+          files=(
+            level-01-pirat-kai.webp
+            level-02-kapitaen-brax.webp
+            level-03-blackfinn.webp
+            level-04-alt-kapitaen-roderick.webp
+            level-05-piratenbaron-vargas.webp
+            level-06-kapitaen-ironhook.webp
+            level-07-admiral-thorne.webp
+            level-08-kartenmeister-corvin.webp
+            level-09-schattenfuerst-azrak.webp
+            level-10-piratenkoenig-varkos.webp
+          )
+          for file in "${files[@]}"; do
+            curl --fail --location --retry 3 --silent --show-error \
+              "https://raw.githubusercontent.com/o-some/pirate-deck/main/public/bosses/${file}" \
+              --output "assets/bosses/${file}"
+          done
+          python3 - <<'PY'
+          from pathlib import Path
+          files = sorted(Path('assets/bosses').glob('level-*.webp'))
+          if len(files) != 10:
+              raise SystemExit(f'Expected 10 boss files, got {len(files)}')
+          for p in files:
+              data = p.read_bytes()
+              if data[:4] != b'RIFF' or data[8:12] != b'WEBP':
+                  raise SystemExit(f'Invalid WebP: {p}')
+              if len(data) < 50000:
+                  raise SystemExit(f'Boss asset unexpectedly small: {p} ({len(data)} bytes)')
+              print(p, len(data), 'OK')
+          PY
+
+      - name: Commit only boss assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f BOSS_ASSET_SYNC_TRIGGER
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/bosses BOSS_ASSET_SYNC_TRIGGER
+          if git diff --cached --quiet; then
+            echo 'Boss assets already match proven source.'
+            exit 0
+          fi
+          git commit -m 'Replace corrupted Word Scramble boss sprites'
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
