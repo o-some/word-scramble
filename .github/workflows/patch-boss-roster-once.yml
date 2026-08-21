@@ -1,0 +1,109 @@
+name: Patch boss visibility and roster once
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'BOSS_ROSTER_PATCH_TRIGGER'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout patch branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Apply targeted boss visibility and roster patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          text=p.read_text(encoding='utf-8')
+
+          # 1) Boss visibility only: enlarge and pull into the playable area without touching gameplay.
+          text=text.replace(
+              ".bossSide::before{content:\"\";position:absolute;z-index:0;left:46%;bottom:84px;width:138px;height:175px;transform:translateX(-50%);border-radius:50%;background:radial-gradient(ellipse at center,rgba(239,199,102,.20),rgba(36,193,184,.08) 42%,transparent 72%);filter:blur(1px);pointer-events:none}",
+              ".bossSide::before{content:\"\";position:absolute;z-index:0;left:38%;bottom:70px;width:184px;height:220px;transform:translateX(-50%);border-radius:50%;background:radial-gradient(ellipse at center,rgba(255,218,112,.28),rgba(36,193,184,.10) 43%,transparent 72%);filter:blur(1px);pointer-events:none}"
+          )
+          text=text.replace(
+              ".bossImg{width:150px!important;max-width:none!important;height:auto!important;max-height:330px!important;object-fit:contain!important;object-position:center bottom!important;margin-left:-26px!important;position:relative!important;z-index:4!important;transform-origin:50% 92%!important;filter:drop-shadow(0 20px 17px rgba(0,0,0,.62)) drop-shadow(0 0 10px rgba(239,199,102,.22));will-change:transform,filter,opacity}",
+              ".bossImg{width:184px!important;max-width:none!important;height:auto!important;max-height:390px!important;object-fit:contain!important;object-position:center bottom!important;margin-left:-72px!important;position:relative!important;z-index:6!important;transform-origin:50% 92%!important;filter:drop-shadow(0 24px 19px rgba(0,0,0,.66)) drop-shadow(0 0 14px rgba(239,199,102,.30));will-change:transform,filter,opacity}"
+          )
+          text=text.replace(
+              "@media(max-width:380px){.bossImg{width:138px!important;margin-left:-24px!important}}",
+              "@media(max-width:380px){.bossImg{width:166px!important;margin-left:-64px!important}.bossSide::before{left:34%;width:166px;height:200px}}"
+          )
+
+          # 2) Add compact upcoming-boss roster styles inside the existing journey card.
+          roster_style="""
+        .ws-boss-roster{grid-column:1/-1;display:flex;align-items:center;gap:7px;margin-top:8px;padding-top:8px;border-top:1px solid rgba(239,199,102,.18);overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none}
+        .ws-boss-roster::-webkit-scrollbar{display:none}
+        .ws-boss-roster__label{flex:0 0 auto;color:#8fbfc5;font-size:.42rem;font-weight:950;letter-spacing:.09em;text-transform:uppercase;margin-right:2px}
+        .ws-boss-roster__card{flex:0 0 86px;min-height:54px;padding:5px 6px;border:1px solid rgba(239,199,102,.24);border-radius:13px;background:linear-gradient(160deg,rgba(5,48,77,.92),rgba(2,29,49,.96));display:grid;grid-template-columns:30px 1fr;gap:5px;align-items:center;box-shadow:inset 0 1px rgba(255,255,255,.05)}
+        .ws-boss-roster__card.current{border-color:#ffe18a;background:linear-gradient(155deg,rgba(104,74,24,.82),rgba(5,43,67,.98));box-shadow:inset 0 1px rgba(255,255,255,.12),0 0 15px rgba(255,210,92,.13)}
+        .ws-boss-roster__thumb{width:30px;height:42px;object-fit:contain;object-position:center bottom;filter:drop-shadow(0 5px 4px rgba(0,0,0,.42))}
+        .ws-boss-roster__meta{min-width:0;line-height:1.05}
+        .ws-boss-roster__meta small{display:block;color:#f0c962;font-size:.36rem;font-weight:950;letter-spacing:.06em;margin-bottom:3px}
+        .ws-boss-roster__meta b{display:block;color:#fff0bd;font-size:.47rem;white-space:normal;overflow:hidden;max-height:2.15em}
+        @media(max-width:380px){.ws-boss-roster__card{flex-basis:80px;grid-template-columns:27px 1fr}.ws-boss-roster__thumb{width:27px;height:38px}.ws-boss-roster__label{display:none}}
+"""
+          anchor="        @media(prefers-reduced-motion:reduce){.bossImg.ws-boss-enter,.bossImg.ws-boss-hit,.bossImg.ws-boss-laugh,.bossSide.ws-boss-hit-stage::after,.bossSide.ws-boss-laugh-stage::after{animation-duration:.12s!important}}"
+          if roster_style.strip() not in text:
+              text=text.replace(anchor,roster_style+'\n'+anchor,1)
+
+          # 3) Roster rendering. Guard DOM writes so the existing MutationObserver cannot loop.
+          roster_logic="""        const syncBossRoster=()=>{
+          if(!s.boss)return;
+          const journey=document.querySelector('.journey');
+          if(!journey)return;
+          let roster=journey.querySelector('.ws-boss-roster');
+          const rosterKey=String(wsBossLevel);
+          if(roster&&roster.dataset.level===rosterKey)return;
+          if(!roster){
+            roster=document.createElement('div');
+            roster.className='ws-boss-roster';
+            journey.appendChild(roster);
+          }
+          roster.dataset.level=rosterKey;
+          const indices=[0,1,2,3].map(offset=>(wsBossLevel-1+offset)%10);
+          roster.innerHTML='<span class=\"ws-boss-roster__label\">Boss-Route</span>'+indices.map((idx,pos)=>'<div class=\"ws-boss-roster__card '+(pos===0?'current':'')+'\"><img class=\"ws-boss-roster__thumb\" src=\"'+bossSprites[idx]+'\" alt=\"\"><span class=\"ws-boss-roster__meta\"><small>'+(pos===0?'AKTUELL':'LEVEL '+(idx+1))+'</small><b>'+bossNames[idx]+'</b></span></div>').join('');
+        };
+
+"""
+          state_anchor="        const syncBossProgress=()=>{"
+          if 'const syncBossRoster=()=>{' not in text:
+              text=text.replace(state_anchor,roster_logic+state_anchor,1)
+
+          old_apply="const applyWordScramblePatches=()=>{fixSelectedLetters();showSuccessSparkles();polishPauseButton();syncBossProgress();syncBossTestJourney();syncBossTestTrigger();syncBossSprite();syncBossReaction()};"
+          new_apply="const applyWordScramblePatches=()=>{fixSelectedLetters();showSuccessSparkles();polishPauseButton();syncBossProgress();syncBossTestJourney();syncBossTestTrigger();syncBossSprite();syncBossRoster();syncBossReaction()};"
+          if text.count(old_apply)!=1:
+              raise SystemExit('Apply patch anchor mismatch')
+          text=text.replace(old_apply,new_apply,1)
+
+          p.write_text(text,encoding='utf-8')
+          PY
+
+          grep -q "ws-boss-roster" index.html
+          grep -q "syncBossRoster" index.html
+          grep -q "width:184px!important" index.html
+          git diff --check
+
+      - name: Commit only index.html
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          rm -f BOSS_ROSTER_PATCH_TRIGGER
+          git add index.html BOSS_ROSTER_PATCH_TRIGGER
+          git commit -m 'Improve boss visibility and add boss route preview'
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
