@@ -127,3 +127,12 @@
   frame.addEventListener('load',install);
   if(frame.contentDocument?.readyState==='complete'||frame.contentDocument?.readyState==='interactive')install();
 })();
+
+(()=>{
+  const id='ws-boss-intro-visual-polish-loader';
+  if(document.getElementById(id))return;
+  const script=document.createElement('script');
+  script.id=id;
+  script.src='./assets/patches/boss-intro-visual-polish.js';
+  document.head.appendChild(script);
+})();
