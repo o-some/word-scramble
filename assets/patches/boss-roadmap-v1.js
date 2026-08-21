@@ -76,6 +76,67 @@
       @media(max-width:500px){.game:has(.bossSide){grid-template-columns:minmax(0,1fr) 104px!important;gap:4px!important}.bossSide{padding:50px 0 46px!important}.bossImg{width:182px!important;max-height:330px!important;margin-left:-68px!important;margin-right:-10px!important}.bossPlate{top:4px!important;left:-34px!important;right:-4px!important;padding:5px 7px!important;font-size:.54rem!important}#pause.ws-pause-button{width:64px!important;min-width:64px!important;height:46px!important}#pause.ws-pause-button::after{font-size:.43rem!important}.ws-boss-info-chip{min-height:38px;padding:4px 6px;font-size:.40rem}.ws-boss-intro-card{padding:15px 14px 14px;border-radius:23px}.ws-boss-intro-portrait{height:164px}.ws-boss-intro-portrait img{max-width:178px;max-height:178px}.ws-boss-intro h2{font-size:1.36rem}}
       @media(max-width:430px){.bossImg{width:168px!important;max-height:315px!important;margin-left:-64px!important;margin-right:-8px!important}.ws-boss-roadmap{width:calc(100vw - 10px);padding:4px 5px 5px;border-radius:12px}.ws-boss-roadmap-head{font-size:.40rem;margin-bottom:3px}.ws-boss-roadmap-head span:last-child{font-size:.31rem}.ws-boss-roadmap-track{gap:3px}.ws-boss-card{grid-template-columns:29px minmax(0,1fr);height:38px;padding:2px 3px 2px 2px;border-radius:8px}.ws-boss-card img{width:29px;height:32px}.ws-boss-card-copy b{font-size:.25rem}.ws-boss-card-copy small{font-size:.24rem}.ws-boss-card em{font-size:.17rem}.ws-boss-info-chip{font-size:0;width:40px;min-width:40px;padding:4px;justify-content:center}.ws-boss-info-chip span{width:22px;height:22px;font-size:.75rem}.ws-boss-ability{margin-top:10px}}
       @media(max-width:355px){.game:has(.bossSide){grid-template-columns:minmax(0,1fr) 92px!important}.bossImg{width:154px!important;margin-left:-59px!important}.bossPlate{left:-30px!important;font-size:.50rem!important}#pause.ws-pause-button{width:60px!important;min-width:60px!important}.ws-boss-card{grid-template-columns:27px minmax(0,1fr)}.ws-boss-card img{width:27px;height:30px}.ws-boss-card-copy small{font-size:.22rem}}
+      @media(max-width:500px){
+        html.ws-boss-compact-mode,body.ws-boss-compact-mode{height:100dvh!important;min-height:100dvh!important;overflow:hidden!important;overscroll-behavior:none}
+        body.ws-boss-compact-mode .app{height:100dvh!important;min-height:100dvh!important;overflow:hidden!important;padding:calc(5px + env(safe-area-inset-top)) 7px calc(64px + env(safe-area-inset-bottom))!important}
+        body.ws-boss-compact-mode .layer{height:100%!important;min-height:0!important;display:flex!important;flex-direction:column!important}
+        body.ws-boss-compact-mode .hud{flex:0 0 auto!important;gap:4px!important;padding-bottom:4px!important}
+        body.ws-boss-compact-mode .hud .top{display:none!important}
+        body.ws-boss-compact-mode .stats{gap:4px!important}
+        body.ws-boss-compact-mode .stat{min-height:36px!important;padding:4px 8px!important;border-radius:13px!important}
+        body.ws-boss-compact-mode .stat small{font-size:.42rem!important}.ws-boss-compact-mode .stat b{font-size:.78rem!important}
+        body.ws-boss-compact-mode .hud2{gap:4px!important;min-height:44px!important}
+        body.ws-boss-compact-mode .level,body.ws-boss-compact-mode .wallet{min-height:40px!important;padding:3px 8px!important}
+        body.ws-boss-compact-mode .level small,body.ws-boss-compact-mode .wallet small{font-size:.38rem!important}
+        body.ws-boss-compact-mode .level b,body.ws-boss-compact-mode .wallet b{font-size:.62rem!important}
+        body.ws-boss-compact-mode #pause.ws-pause-button{width:54px!important;min-width:54px!important;height:44px!important}
+        body.ws-boss-compact-mode .ws-boss-info-chip{min-height:44px!important}
+        body.ws-boss-compact-mode #game{flex:1 1 auto!important;min-height:0!important;overflow:hidden!important;display:block!important}
+        body.ws-boss-compact-mode #game>.game{height:100%!important;min-height:0!important;grid-template-columns:minmax(0,1fr) 92px!important;grid-template-rows:minmax(0,1fr)!important;gap:4px!important;align-items:stretch!important;overflow:hidden!important}
+        body.ws-boss-compact-mode #game>.game>.journey{display:none!important}
+        body.ws-boss-compact-mode .card{height:100%!important;min-height:0!important;padding:9px 8px 8px!important;border-radius:22px!important;overflow:hidden!important}
+        body.ws-boss-compact-mode .eyebrow{font-size:.42rem!important;line-height:1.1!important}
+        body.ws-boss-compact-mode .bossHp{margin:4px 0 5px!important;padding:5px 8px!important;border-radius:12px!important;font-size:.58rem!important}
+        body.ws-boss-compact-mode .prompt{margin:6px 0 7px!important}
+        body.ws-boss-compact-mode .prompt h1{margin:0 0 4px!important;font-size:clamp(1.72rem,7.6vw,2.15rem)!important;line-height:.92!important}
+        body.ws-boss-compact-mode .prompt p{max-width:28ch!important;font-size:.56rem!important;line-height:1.25!important}
+        body.ws-boss-compact-mode .ws-boss-ability-badge,body.ws-boss-compact-mode .ws-boss-ability-badge-4-6,body.ws-boss-compact-mode .ws-boss-ability-badge-7-10{margin-bottom:4px!important;padding:3px 6px!important;font-size:.34rem!important}
+        body.ws-boss-compact-mode .ws-roderick-timer{margin-bottom:5px!important;padding:4px 6px!important;border-radius:10px!important}
+        body.ws-boss-compact-mode .ws-roderick-timer-head{margin-bottom:3px!important;font-size:.36rem!important}.ws-boss-compact-mode .ws-roderick-track{height:5px!important}
+        body.ws-boss-compact-mode .ws-vargas-note{margin:-1px 0 4px!important;font-size:.34rem!important}
+        body.ws-boss-compact-mode .label{margin-bottom:5px!important;font-size:.43rem!important;line-height:1!important}
+        body.ws-boss-compact-mode .slots+ .label{margin-top:8px!important}
+        body.ws-boss-compact-mode .slots,body.ws-boss-compact-mode .tiles{gap:4px!important}
+        body.ws-boss-compact-mode .slot{width:min(38px,calc((100% - 32px)/var(--n)))!important;height:34px!important;border-radius:9px!important;font-size:.88rem!important}
+        body.ws-boss-compact-mode .tiles{margin:5px 0 7px!important}
+        body.ws-boss-compact-mode .tile{min-width:31px!important;width:min(40px,calc((100% - 32px)/var(--n)))!important;height:44px!important;border-bottom-width:4px!important;border-radius:11px!important;font-size:1.02rem!important}
+        body.ws-boss-compact-mode .actions{gap:5px!important;margin-top:7px!important}
+        body.ws-boss-compact-mode .tool{min-height:44px!important;border-radius:13px!important;font-size:.55rem!important;line-height:1.15!important}
+        body.ws-boss-compact-mode .check{min-height:48px!important;border-radius:14px!important;font-size:.82rem!important;box-shadow:0 4px 0 #75430e!important}
+        body.ws-boss-compact-mode .bossSide{height:100%!important;min-height:0!important;padding:40px 0 10px!important;align-items:center!important;justify-content:flex-start!important;overflow:visible!important}
+        body.ws-boss-compact-mode .bossSide::before{left:50%!important;bottom:72px!important;width:112px!important;height:158px!important}
+        body.ws-boss-compact-mode .bossImg{width:120px!important;max-height:220px!important;margin:14px 0 0 -14px!important}
+        body.ws-boss-compact-mode .bossPlate{top:3px!important;left:-12px!important;right:0!important;padding:4px 5px!important;border-radius:10px!important;font-size:.46rem!important;white-space:nowrap!important}
+        body.ws-boss-compact-mode .bossSide .bubble{display:none!important}
+        body.ws-boss-compact-mode .bossFeedback{top:36px!important;left:-18px!important;right:0!important;padding:5px 6px!important;font-size:.44rem!important;line-height:1.2!important}
+        body.ws-boss-compact-mode .ws-boss-roadmap{bottom:max(3px,env(safe-area-inset-bottom))!important;padding:3px 4px 4px!important;border-radius:11px!important}
+        body.ws-boss-compact-mode .ws-boss-roadmap-head{margin-bottom:2px!important;font-size:.36rem!important}.ws-boss-compact-mode .ws-boss-roadmap-head span:last-child{font-size:.28rem!important}
+      }
+      @media(max-width:500px) and (max-height:740px){
+        body.ws-boss-compact-mode .app{padding-top:calc(3px + env(safe-area-inset-top))!important;padding-bottom:calc(57px + env(safe-area-inset-bottom))!important}
+        body.ws-boss-compact-mode .hud{gap:3px!important;padding-bottom:3px!important}
+        body.ws-boss-compact-mode .stat{min-height:32px!important;padding:3px 7px!important}.ws-boss-compact-mode .stat small{font-size:.38rem!important}.ws-boss-compact-mode .stat b{font-size:.72rem!important}
+        body.ws-boss-compact-mode .hud2{min-height:40px!important;gap:3px!important}.ws-boss-compact-mode .level,.ws-boss-compact-mode .wallet{min-height:38px!important;padding:2px 7px!important}.ws-boss-compact-mode #pause.ws-pause-button{height:42px!important;width:50px!important;min-width:50px!important}
+        body.ws-boss-compact-mode #game>.game{grid-template-columns:minmax(0,1fr) 84px!important;gap:3px!important}
+        body.ws-boss-compact-mode .card{padding:7px 7px 6px!important;border-radius:20px!important}
+        body.ws-boss-compact-mode .bossHp{margin:3px 0 4px!important;padding:4px 7px!important;font-size:.54rem!important}
+        body.ws-boss-compact-mode .prompt{margin:4px 0 5px!important}.ws-boss-compact-mode .prompt h1{font-size:1.62rem!important}.ws-boss-compact-mode .prompt p{font-size:.51rem!important;line-height:1.2!important}
+        body.ws-boss-compact-mode .slot{height:31px!important;font-size:.82rem!important}.ws-boss-compact-mode .tile{height:40px!important;font-size:.96rem!important}.ws-boss-compact-mode .tiles{margin:4px 0 5px!important}
+        body.ws-boss-compact-mode .actions{margin-top:5px!important;gap:4px!important}.ws-boss-compact-mode .tool{min-height:42px!important;font-size:.51rem!important}.ws-boss-compact-mode .check{min-height:45px!important;font-size:.76rem!important}
+        body.ws-boss-compact-mode .bossSide{padding-top:36px!important}.ws-boss-compact-mode .bossImg{width:108px!important;max-height:202px!important;margin-left:-10px!important}.ws-boss-compact-mode .bossPlate{left:-10px!important;font-size:.42rem!important}
+        body.ws-boss-compact-mode .ws-boss-card{height:34px!important}.ws-boss-compact-mode .ws-boss-card img{height:28px!important}.ws-boss-compact-mode .ws-boss-roadmap-head{font-size:.32rem!important}
+      }
+      @media(max-width:355px){body.ws-boss-compact-mode #game>.game{grid-template-columns:minmax(0,1fr) 78px!important}.ws-boss-compact-mode .bossImg{width:102px!important;margin-left:-8px!important}.ws-boss-compact-mode .tile{min-width:29px!important;width:min(37px,calc((100% - 28px)/var(--n)))!important}.ws-boss-compact-mode .slot{width:min(35px,calc((100% - 28px)/var(--n)))!important}}
       @media(prefers-reduced-motion:reduce){.ws-boss-intro-card,.ws-boss-intro-start{scroll-behavior:auto!important;transition:none!important}}
     `;
     doc.head.appendChild(style);
@@ -158,6 +219,8 @@
       ensureStyles(doc);
       const level=currentLevel(win,doc);
       const active=bossEncounterActive(win,doc);
+      doc.documentElement.classList.toggle('ws-boss-compact-mode',active);
+      doc.body.classList.toggle('ws-boss-compact-mode',active);
       syncBossIntro(win,doc,level,active);
       const roadmap=ensureRoadmap(doc);
       const key=level+':'+active;
