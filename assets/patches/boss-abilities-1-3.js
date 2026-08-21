@@ -164,3 +164,12 @@
   frame.addEventListener('load',start);
   if(frame.contentDocument?.readyState==='complete'||frame.contentDocument?.readyState==='interactive')start();
 })();
+
+(()=>{
+  const id='ws-boss-abilities-4-6-loader';
+  if(document.getElementById(id))return;
+  const script=document.createElement('script');
+  script.id=id;
+  script.src='./assets/patches/boss-abilities-4-6.js';
+  document.head.appendChild(script);
+})();
