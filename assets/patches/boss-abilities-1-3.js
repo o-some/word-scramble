@@ -180,5 +180,13 @@
   const script=document.createElement('script');
   script.id=id;
   script.src='./assets/patches/boss-abilities-7-10.js';
+  script.addEventListener('load',()=>{
+    const rarityId='ws-word-rarities-loader';
+    if(document.getElementById(rarityId))return;
+    const rarity=document.createElement('script');
+    rarity.id=rarityId;
+    rarity.src='./assets/patches/word-rarities.js';
+    document.head.appendChild(rarity);
+  },{once:true});
   document.head.appendChild(script);
 })();
