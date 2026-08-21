@@ -108,3 +108,12 @@
   frame.addEventListener('load',install);
   if(frame.contentDocument?.readyState==='complete'||frame.contentDocument?.readyState==='interactive')install();
 })();
+
+(()=>{
+  const id='ws-tula-final-polish-loader';
+  if(document.getElementById(id))return;
+  const script=document.createElement('script');
+  script.id=id;
+  script.src='./assets/patches/tula-reactions-final-polish.js';
+  document.head.appendChild(script);
+})();
