@@ -57,3 +57,12 @@
   frame.addEventListener('load',install);
   if(frame.contentDocument?.readyState==='complete'||frame.contentDocument?.readyState==='interactive')install();
 })();
+
+(()=>{
+  const id='ws-boss-ux-final-regression-loader';
+  if(document.getElementById(id))return;
+  const script=document.createElement('script');
+  script.id=id;
+  script.src='./assets/patches/boss-ux-final-regression.js';
+  document.head.appendChild(script);
+})();
