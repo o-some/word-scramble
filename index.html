@@ -147,7 +147,8 @@ gameFrame.addEventListener('load',()=>{
           const journey=document.querySelector('.journey');
           if(!journey)return;
           const counter=journey.lastElementChild;
-          if(counter&&counter.tagName==='B')counter.textContent=Math.min(s.normal,WS_BOSS_AFTER_WORDS)+'/'+WS_BOSS_AFTER_WORDS;
+          const desiredCounter=Math.min(s.normal,WS_BOSS_AFTER_WORDS)+'/'+WS_BOSS_AFTER_WORDS;
+          if(counter&&counter.tagName==='B'&&counter.textContent!==desiredCounter)counter.textContent=desiredCounter;
           const track=journey.querySelector('.track');
           if(track)track.style.setProperty('--p',Math.min(100,(s.normal/WS_BOSS_AFTER_WORDS)*100)+'%');
         };
@@ -170,7 +171,7 @@ gameFrame.addEventListener('load',()=>{
           const pauseButton=document.getElementById('pause');
           if(!pauseButton)return;
           pauseButton.classList.add('ws-pause-button');
-          pauseButton.textContent='';
+          if(pauseButton.textContent!=='')pauseButton.textContent='';
           pauseButton.setAttribute('aria-label','Spiel pausieren');
           pauseButton.setAttribute('title','Pause');
         };
@@ -191,7 +192,8 @@ gameFrame.addEventListener('load',()=>{
           if(!img)return;
           const desired=bossSprites[wsBossLevel-1];
           const plate=document.querySelector('.bossPlate');
-          if(plate)plate.textContent='LEVEL '+wsBossLevel+' · '+bossNames[wsBossLevel-1].toUpperCase();
+          const desiredPlate='LEVEL '+wsBossLevel+' · '+bossNames[wsBossLevel-1].toUpperCase();
+          if(plate&&plate.textContent!==desiredPlate)plate.textContent=desiredPlate;
           img.alt=bossNames[wsBossLevel-1];img.loading='eager';img.decoding='async';
           if(img.dataset.wsBossSprite!==desired){
             img.dataset.wsBossSprite=desired;
