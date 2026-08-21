@@ -70,10 +70,10 @@
       overlay.setAttribute('aria-modal','true');
       overlay.setAttribute('aria-label',boss.name+' Boss-Dossier');
       overlay.innerHTML=`<section class="ws-boss-dossier-card"><div class="ws-boss-dossier-kicker">☠ BOSS-DOSSIER</div><div class="ws-boss-dossier-portrait"><img src="${boss.sprite}" alt="${boss.name}"></div><p class="ws-boss-dossier-level">LEVEL ${lvl}</p><h2>${boss.name}</h2><div class="ws-boss-dossier-status">${status}</div><div class="ws-boss-dossier-ability"><small>BESONDERE FÄHIGKEIT</small><b>${boss.ability}</b><p>${boss.description}</p></div><div class="ws-boss-dossier-stars" aria-label="${best} von 3 Sternen">${best?'★'.repeat(best)+'☆'.repeat(3-best):'☆☆☆'}</div><button type="button" class="ws-boss-dossier-close">SCHLIESSEN</button></section>`;
-      const close=()=>overlay.remove();
+      const onKey=event=>{if(event.key==='Escape')close();};
+      const close=()=>{doc.removeEventListener('keydown',onKey);overlay.remove();};
       overlay.querySelector('.ws-boss-dossier-close')?.addEventListener('click',close,{once:true});
       overlay.addEventListener('click',event=>{if(event.target===overlay)close();});
-      const onKey=event=>{if(event.key==='Escape'){close();doc.removeEventListener('keydown',onKey);}};
       doc.addEventListener('keydown',onKey);
       doc.body.appendChild(overlay);
       overlay.querySelector('.ws-boss-dossier-close')?.focus();
@@ -96,7 +96,9 @@
       if(!track)return;
       const wanted=bosses.map((_,i)=>i+1);
       const existing=Array.from(track.querySelectorAll('.ws-boss-card')).map(c=>Number(c.dataset.level||0));
-      if(existing.length!==wanted.length||existing.some((v,i)=>v!==wanted[i])){
+      const signature=level+':'+active+':'+wanted.map(lvl=>Math.max(0,Math.min(3,Number(stars[lvl]||0)))).join(',');
+      const needsRebuild=existing.length!==wanted.length||existing.some((v,i)=>v!==wanted[i])||roadmap.dataset.wsCampaignSignature!==signature;
+      if(needsRebuild){
         const oldScroll=track.scrollLeft;
         track.innerHTML='';
         wanted.forEach(lvl=>{
@@ -113,6 +115,7 @@
           card.addEventListener('click',()=>showDossier(lvl));
           track.appendChild(card);
         });
+        roadmap.dataset.wsCampaignSignature=signature;
         track.scrollLeft=oldScroll;
       }
     }catch(err){console.warn('Word Scramble campaign roadmap skipped',err)}
