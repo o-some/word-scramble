@@ -34,15 +34,24 @@
       .ws-boss-stars{display:block;margin-top:2px;color:#ffe18a;font-size:.26rem;line-height:1;letter-spacing:.02em;text-shadow:0 1px 3px rgba(0,0,0,.6)}
       .ws-boss-card .ws-defeated-mark{background:#7a641f!important;color:#fff0bd!important}
       .ws-boss-card.current .ws-boss-stars{font-size:.28rem}
-      @media(max-width:430px){.ws-boss-stars{font-size:.22rem}.ws-boss-card.current .ws-boss-stars{font-size:.23rem}}
+      .ws-star-rules{margin:1px 0 11px;padding:7px 9px;border:1px solid rgba(239,199,102,.28);border-radius:12px;background:rgba(1,31,51,.52);color:#bfdfe0;font-size:.48rem;font-weight:850;line-height:1.35;text-align:center}.ws-star-rules b{color:#ffe18a}
+      @media(max-width:430px){.ws-boss-stars{font-size:.22rem}.ws-boss-card.current .ws-boss-stars{font-size:.23rem}.ws-star-rules{font-size:.41rem;padding:6px 7px;margin-bottom:9px}}
     `;
     doc.head.appendChild(style);
+  }
+  function ensureStarRules(doc){
+    const intro=doc.querySelector('.ws-boss-intro-card');
+    if(!intro||intro.querySelector('.ws-star-rules'))return;
+    const rule=doc.createElement('div');
+    rule.className='ws-star-rules';
+    rule.innerHTML='<b>STERNE</b> · 3★ ohne Fehler/Tipp · 2★ max. 1 Fehler + 1 Tipp · 1★ Sieg';
+    intro.querySelector('.ws-boss-intro-start')?.insertAdjacentElement('beforebegin',rule);
   }
   function decorateRoadmap(){
     try{
       const win=frame.contentWindow,doc=frame.contentDocument;
       if(!win||!doc?.body||!doc.head||!bosses.length)return;
-      ensureStyles(doc);
+      ensureStyles(doc);ensureStarRules(doc);
       const roadmap=doc.querySelector('.ws-boss-roadmap');
       if(!roadmap)return;
       const level=currentLevel(win,doc),active=bossActive(win,doc),stars=readStars(win);
