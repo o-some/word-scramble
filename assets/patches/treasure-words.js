@@ -143,3 +143,12 @@
   frame.addEventListener('load',install);
   if(frame.contentDocument?.readyState==='complete'||frame.contentDocument?.readyState==='interactive')install();
 })();
+
+(()=>{
+  const id='ws-boss-campaign-stars-loader';
+  if(document.getElementById(id))return;
+  const script=document.createElement('script');
+  script.id=id;
+  script.src='./assets/patches/boss-campaign-stars.js';
+  document.head.appendChild(script);
+})();
