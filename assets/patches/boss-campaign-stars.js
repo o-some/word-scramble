@@ -52,7 +52,7 @@
     if(!intro||intro.querySelector('.ws-star-rules'))return;
     const rule=doc.createElement('div');
     rule.className='ws-star-rules';
-    rule.innerHTML='<b>STERNE</b> · 3★ ohne Fehler/Tipp · 2★ max. 1 Fehler + 1 Tipp · 1★ Sieg';
+    rule.innerHTML='<b>STERNE</b> · 3★ ohne Fehler/Hilfe · 2★ max. 1 Fehler + 1 Hilfe · 1★ Sieg';
     intro.querySelector('.ws-boss-intro-start')?.insertAdjacentElement('beforebegin',rule);
   }
   function showDossier(level){
@@ -139,7 +139,7 @@
       const currentLevel=()=>{const m=document.querySelector('.bossPlate')?.textContent?.match(/LEVEL\\s+(\\d+)/i);if(m)return Math.max(1,Math.min(10,Number(m[1])||1));try{return Math.max(1,Math.min(10,Number(sessionStorage.getItem('wordScrambleBossLevel')||1)));}catch{return 1;}};
       const readStars=()=>{try{const v=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');return v&&typeof v==='object'?v:{};}catch{return {};}};
       const saveResult=level=>{const misses=Math.max(0,Number(s.bossMiss)||0),hints=Math.max(0,encounterHints),stars=misses===0&&hints===0?3:(misses<=1&&hints<=1?2:1),progress=readStars();progress[level]=Math.max(Number(progress[level]||0),stars);try{localStorage.setItem(STORAGE_KEY,JSON.stringify(progress));}catch{}const result={level,stars,misses,hints,best:Number(progress[level]||stars),at:Date.now()};try{sessionStorage.setItem('wordScrambleLastBossResultV1',JSON.stringify(result));}catch{}window.WS_LAST_BOSS_RESULT=result;document.dispatchEvent(new CustomEvent('ws-boss-campaign-updated',{detail:result}));};
-      document.addEventListener('click',event=>{const button=event.target?.closest?.('#hint');if(button&&!button.disabled&&s.boss&&!s.feedback)encounterHints++;},true);
+      document.addEventListener('ws-hint-used',event=>{if(s.boss&&event.detail?.type)encounterHints++;});
       render=function(){const nowBoss=Boolean(s.boss);if(nowBoss&&!wasBoss){encounterHints=0;resultRecorded=false;}if(nowBoss&&!resultRecorded&&Number(s.bossHp)<=0){resultRecorded=true;saveResult(currentLevel());}baseRender();wasBoss=Boolean(s.boss);};
       render();
     })();`;
@@ -156,6 +156,15 @@
   }
   frame.addEventListener('load',install);
   if(frame.contentDocument?.readyState==='complete'||frame.contentDocument?.readyState==='interactive')install();
+})();
+
+(()=>{
+  const id='ws-boss-hints-v2-loader';
+  if(document.getElementById(id))return;
+  const script=document.createElement('script');
+  script.id=id;
+  script.src='./assets/patches/boss-hints-v2.js';
+  document.head.appendChild(script);
 })();
 
 (()=>{
