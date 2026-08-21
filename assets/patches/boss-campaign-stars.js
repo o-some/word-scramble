@@ -100,6 +100,7 @@
       const needsRebuild=existing.length!==wanted.length||existing.some((v,i)=>v!==wanted[i])||roadmap.dataset.wsCampaignSignature!==signature;
       if(needsRebuild){
         const oldScroll=track.scrollLeft;
+        const previousLevel=Number(roadmap.dataset.wsCampaignLevel||0);
         track.innerHTML='';
         wanted.forEach(lvl=>{
           const boss=bosses[lvl-1];if(!boss)return;
@@ -116,7 +117,13 @@
           track.appendChild(card);
         });
         roadmap.dataset.wsCampaignSignature=signature;
-        track.scrollLeft=oldScroll;
+        roadmap.dataset.wsCampaignLevel=String(level);
+        if(previousLevel!==level){
+          const currentCard=track.querySelector('.ws-boss-card.current');
+          if(currentCard){track.scrollLeft=Math.max(0,currentCard.offsetLeft-(track.clientWidth-currentCard.offsetWidth)/2);}
+        }else{
+          track.scrollLeft=oldScroll;
+        }
       }
     }catch(err){console.warn('Word Scramble campaign roadmap skipped',err)}
   }
