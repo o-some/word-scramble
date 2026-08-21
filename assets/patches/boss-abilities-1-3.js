@@ -72,7 +72,7 @@
 
   function wordKey(doc,lvl){
     const prompt=doc.querySelector('.prompt h1')?.textContent?.trim()||'';
-    const tiles=Array.from(doc.querySelectorAll('.tiles .tile:not(.ws-decoy)')).map(x=>x.textContent.trim()).join('');
+    const tiles=Array.from(doc.querySelectorAll('.tiles .tile:not(.ws-decoy)')).map(x=>x.textContent.trim()).sort().join('');
     return `${lvl}|${prompt}|${tiles}`;
   }
 
