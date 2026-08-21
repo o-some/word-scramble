@@ -48,7 +48,7 @@
         if(!img)return;
         img.classList.remove('ws-tula-pop','ws-tula-wobble','ws-tula-glow');
         void img.offsetWidth;
-        if(cls)img.classList.add(cls);
+        if(cls)img.classList.add(...cls.split(/\\s+/).filter(Boolean));
       }
 
       function setNormalReaction(){
@@ -60,8 +60,9 @@
         const rarity=(document.querySelector('.ws-word-rarity')?.textContent||'').toUpperCase();
         const treasure=Boolean(document.querySelector('.ws-treasure-badge'));
         if(s.feedback){
-          key='feedback:'+s.i+':'+s.normal+':'+Boolean(s.feedback.ok);
+          key='feedback:'+s.i+':'+s.normal+':'+Boolean(s.feedback.ok)+':'+s.lives;
           if(s.feedback.ok){src=assets.celebrating;text='Stark gelöst!';cls='ws-tula-pop';}
+          else if(Number(s.lives)<=0){src=assets.surprised;text='Kopf hoch – neuer Versuch!';cls='ws-tula-wobble';}
           else{src=assets.surprised;text='Fast – versuch’s nochmal!';cls='ws-tula-wobble';}
         }else if(treasure){
           key='treasure:'+s.i+':'+s.normal;src=assets.celebrating;text='Da ist ein Schatz! 🗝';cls='ws-tula-pop ws-tula-glow';
