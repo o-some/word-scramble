@@ -135,3 +135,12 @@
   frame.addEventListener('load',install);
   if(frame.contentDocument?.readyState==='complete'||frame.contentDocument?.readyState==='interactive')install();
 })();
+
+(()=>{
+  const id='ws-treasure-words-loader';
+  if(document.getElementById(id))return;
+  const script=document.createElement('script');
+  script.id=id;
+  script.src='./assets/patches/treasure-words.js';
+  document.head.appendChild(script);
+})();
