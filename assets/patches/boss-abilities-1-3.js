@@ -173,3 +173,12 @@
   script.src='./assets/patches/boss-abilities-4-6.js';
   document.head.appendChild(script);
 })();
+
+(()=>{
+  const id='ws-boss-abilities-7-10-loader';
+  if(document.getElementById(id))return;
+  const script=document.createElement('script');
+  script.id=id;
+  script.src='./assets/patches/boss-abilities-7-10.js';
+  document.head.appendChild(script);
+})();
