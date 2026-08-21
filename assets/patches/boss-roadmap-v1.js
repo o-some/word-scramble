@@ -20,7 +20,7 @@
 
   let timer=0;
   let lastKey='';
-  let wasActive=false;
+  let wasEncounterActive=false;
   let introShownForEncounter=false;
 
   function currentLevel(win,doc){
@@ -30,11 +30,23 @@
     try{return Math.max(1,Math.min(10,Number(win.sessionStorage.getItem('wordScrambleBossLevel')||1)));}catch{return 1;}
   }
 
-  function bossIsVisible(win,doc){
-    const img=doc.querySelector('.bossImg');
-    if(!img)return false;
-    const style=win.getComputedStyle(img);
-    return style.display!=='none'&&style.visibility!=='hidden'&&Number(style.opacity||1)>0&&img.getClientRects().length>0;
+  function ensureEncounterStateProbe(doc){
+    if(doc.getElementById('ws-boss-encounter-state-probe'))return;
+    const runtime=doc.createElement('script');
+    runtime.id='ws-boss-encounter-state-probe';
+    runtime.textContent=`(()=>{
+      if(window.__WS_BOSS_ENCOUNTER_ACTIVE__)return;
+      window.__WS_BOSS_ENCOUNTER_ACTIVE__=()=>typeof s!=='undefined'&&Boolean(s.boss);
+    })();`;
+    doc.documentElement.appendChild(runtime);
+  }
+
+  function bossEncounterActive(win,doc){
+    try{
+      ensureEncounterStateProbe(doc);
+      if(typeof win.__WS_BOSS_ENCOUNTER_ACTIVE__==='function')return Boolean(win.__WS_BOSS_ENCOUNTER_ACTIVE__());
+    }catch{}
+    return Boolean(doc.querySelector('.bossSide'));
   }
 
   function ensureStyles(doc){
@@ -113,7 +125,7 @@
     const close=()=>{
       overlay.remove();
       const chip=ensureInfoChip(doc);
-      if(chip&&bossIsVisible(frame.contentWindow,doc))chip.classList.add('show');
+      if(chip&&bossEncounterActive(frame.contentWindow,doc))chip.classList.add('show');
     };
     overlay.querySelector('.ws-boss-intro-start')?.addEventListener('click',close,{once:true});
     doc.body.appendChild(overlay);
@@ -122,7 +134,7 @@
 
   function syncBossIntro(win,doc,level,active){
     const chip=ensureInfoChip(doc);
-    if(active&&!wasActive){
+    if(active&&!wasEncounterActive){
       introShownForEncounter=false;
       if(chip)chip.classList.remove('show');
     }
@@ -130,12 +142,12 @@
       introShownForEncounter=true;
       showBossIntro(doc,level,true);
     }
-    if(!active){
+    if(!active&&wasEncounterActive){
       introShownForEncounter=false;
       doc.querySelector('.ws-boss-intro')?.remove();
       if(chip)chip.classList.remove('show');
     }
-    wasActive=active;
+    wasEncounterActive=active;
   }
 
   function render(){
@@ -145,7 +157,7 @@
       if(!win||!doc||!doc.body||!doc.head)return;
       ensureStyles(doc);
       const level=currentLevel(win,doc);
-      const active=bossIsVisible(win,doc);
+      const active=bossEncounterActive(win,doc);
       syncBossIntro(win,doc,level,active);
       const roadmap=ensureRoadmap(doc);
       const key=level+':'+active;
@@ -170,7 +182,7 @@
   function start(){
     window.clearInterval(timer);
     lastKey='';
-    wasActive=false;
+    wasEncounterActive=false;
     introShownForEncounter=false;
     render();
     timer=window.setInterval(render,300);
