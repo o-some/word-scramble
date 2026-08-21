@@ -3,8 +3,6 @@ name: Patch pause and boss trigger once
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    paths:
-      - 'PAUSE_BOSS3_PATCH_TRIGGER'
 
 permissions:
   contents: write
@@ -29,7 +27,6 @@ jobs:
           p=Path('index.html')
           text=p.read_text(encoding='utf-8')
 
-          # A) Pause button presentation only.
           anchor="    if(!doc.getElementById('word-scramble-settings-polish-style')){"
           pause_style="""    if(!doc.getElementById('word-scramble-pause-button-style')){
       const pauseStyle=doc.createElement('style');
@@ -48,7 +45,6 @@ jobs:
               raise SystemExit('Pause style anchor mismatch')
           text=text.replace(anchor,pause_style+anchor,1)
 
-          # B) Boss test trigger. Do not replace check(), scoring or lives logic.
           state_anchor="        let lastBossReaction='';"
           trigger_logic="""        const WS_BOSS_AFTER_WORDS=3;
         let wsBossTriggering=false;
