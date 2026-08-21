@@ -32,8 +32,10 @@
       decorateBossInfo(doc);
       if(doc.documentElement.dataset.wsBossUxFinalRegression==='1')return;
       doc.documentElement.dataset.wsBossUxFinalRegression='1';
-      const observer=new MutationObserver(()=>decorateBossInfo(doc));
-      observer.observe(doc.body,{childList:true,subtree:true});
+      doc.addEventListener('click',event=>{
+        if(!event.target?.closest?.('.ws-boss-info-chip'))return;
+        window.setTimeout(()=>decorateBossInfo(doc),0);
+      },true);
     }catch(err){console.warn('Word Scramble final boss UX regression patch skipped',err)}
   }
 
