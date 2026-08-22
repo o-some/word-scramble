@@ -4,7 +4,7 @@
   const frame=document.getElementById('game');
   if(!frame)return;
 
-  const abilityNames={1:'Deckschrubber-Trick',2:'Verdeckter Buchstabe',3:'Köderbuchstabe'};
+  const abilityNames={1:'Deckschrubber-Trick',2:'Verdecktes Wort',3:'Köderwort'};
   const alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   let timer=0;
   let lastWordKey='';
@@ -115,7 +115,7 @@
     fake.type='button';
     fake.className='tile ws-decoy';
     fake.textContent=letter;
-    fake.setAttribute('aria-label',`${letter}, möglicher Köderbuchstabe`);
+    fake.setAttribute('aria-label',`${letter}, möglicher Köder`);
     fake.addEventListener('click',ev=>{
       ev.preventDefault();
       ev.stopPropagation();
@@ -166,35 +166,64 @@
 })();
 
 (()=>{
-  const id='ws-boss-abilities-4-6-loader';
-  if(document.getElementById(id))return;
-  const script=document.createElement('script');
-  script.id=id;
-  script.src='./assets/patches/boss-abilities-4-6.js';
-  document.head.appendChild(script);
-})();
+  'use strict';
+  const version='20260822-stable-runtime-1';
+  const loaderIds=[
+    'ws-boss-abilities-4-6-loader',
+    'ws-boss-abilities-7-10-loader',
+    'ws-variable-boss-words-loader',
+    'ws-word-rarities-loader',
+    'ws-treasure-words-loader',
+    'ws-boss-campaign-stars-loader',
+    'ws-boss-hints-v2-loader',
+    'ws-boss-victory-loot-loader',
+    'ws-boss-intro-visual-polish-loader',
+    'ws-boss-ux-final-regression-loader',
+    'ws-tula-final-polish-loader'
+  ];
 
-(()=>{
-  const id='ws-boss-abilities-7-10-loader';
-  if(document.getElementById(id))return;
-  const script=document.createElement('script');
-  script.id=id;
-  script.src='./assets/patches/boss-abilities-7-10.js';
-  script.addEventListener('load',()=>{
-    const variableId='ws-variable-boss-words-loader';
-    if(document.getElementById(variableId))return;
-    const variable=document.createElement('script');
-    variable.id=variableId;
-    variable.src='./assets/patches/variable-boss-words.js';
-    variable.addEventListener('load',()=>{
-      const rarityId='ws-word-rarities-loader';
-      if(document.getElementById(rarityId))return;
-      const rarity=document.createElement('script');
-      rarity.id=rarityId;
-      rarity.src='./assets/patches/word-rarities.js';
-      document.head.appendChild(rarity);
-    },{once:true});
-    document.head.appendChild(variable);
-  },{once:true});
-  document.head.appendChild(script);
+  loaderIds.forEach(id=>{
+    if(document.getElementById(id))return;
+    const marker=document.createElement('meta');
+    marker.id=id;
+    marker.dataset.wsLoaderMarker='stable';
+    document.head.appendChild(marker);
+  });
+
+  const pipeline=[
+    ['ws-stable-boss-abilities-4-6','./assets/patches/boss-abilities-4-6.js'],
+    ['ws-stable-boss-abilities-7-10','./assets/patches/boss-abilities-7-10.js'],
+    ['ws-stable-variable-boss-words','./assets/patches/variable-boss-words.js'],
+    ['ws-stable-word-rarities','./assets/patches/word-rarities.js'],
+    ['ws-stable-treasure-words','./assets/patches/treasure-words.js'],
+    ['ws-stable-boss-campaign-stars','./assets/patches/boss-campaign-stars.js'],
+    ['ws-stable-boss-hints-v2','./assets/patches/boss-hints-v2.js'],
+    ['ws-stable-boss-victory-loot','./assets/patches/boss-victory-loot.js'],
+    ['ws-stable-tula-final-polish','./assets/patches/tula-reactions-final-polish.js'],
+    ['ws-stable-boss-intro-visual-polish','./assets/patches/boss-intro-visual-polish.js'],
+    ['ws-stable-boss-ux-final-regression','./assets/patches/boss-ux-final-regression.js']
+  ];
+
+  function load(id,src){
+    return new Promise((resolve,reject)=>{
+      if(document.getElementById(id)){resolve();return;}
+      const script=document.createElement('script');
+      script.id=id;
+      script.async=false;
+      script.src=src+(src.includes('?')?'&':'?')+'v='+version;
+      script.addEventListener('load',()=>resolve(),{once:true});
+      script.addEventListener('error',()=>reject(new Error('Failed to load '+src)),{once:true});
+      document.head.appendChild(script);
+    });
+  }
+
+  (async()=>{
+    try{
+      for(const [id,src] of pipeline)await load(id,src);
+      document.documentElement.dataset.wsStableRuntime='ready';
+    }catch(err){
+      document.documentElement.dataset.wsStableRuntime='failed';
+      console.error('Word Scramble stable runtime pipeline failed',err);
+    }
+  })();
 })();
