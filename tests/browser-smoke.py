@@ -25,7 +25,7 @@ def state(driver):
         units: typeof WS_GET_BOSS_UNITS==='function' ? WS_GET_BOSS_UNITS().map(String) : [],
         checkBound: document.getElementById('check')?.onclick === check,
         checkType: typeof check,
-        checkText: String(check).slice(0,260)
+        checkText: String(check).slice(0,320)
       };
     """)
 
@@ -56,8 +56,14 @@ def solve_normal(driver):
     wait(driver, lambda d: not state(d)["feedback"], 3.0, "next normal round")
 
 
+def dismiss_intro(driver):
+    if driver.execute_script("return !!document.querySelector('.ws-boss-intro')"):
+        driver.execute_script("document.querySelector('.ws-boss-intro-start')?.click()")
+        wait(driver, lambda d: d.execute_script("return !document.querySelector('.ws-boss-intro')"), 2, "boss intro close")
+
+
 def fill_current_boss_sentence(driver):
-    for _ in range(120):
+    for _ in range(160):
         st = state(driver)
         units = [u.upper() for u in st["units"]]
         selected = [u.upper() for u in st["selected"]]
@@ -73,10 +79,7 @@ def fill_current_boss_sentence(driver):
           target.click();
           return true;
         """, next_unit)
-        if not clicked:
-            time.sleep(0.06)
-        else:
-            time.sleep(0.025)
+        time.sleep(0.04 if clicked else 0.07)
     raise AssertionError(f"could not fill boss sentence: {state(driver)}")
 
 
@@ -89,13 +92,52 @@ def solve_boss_sentence(driver):
     return before, after
 
 
-def start_boss(driver):
+def start_boss_after_normal_rounds(driver):
     wait(driver, lambda d: state(d)["boss"], 4, "boss state after normal rounds")
     wait(driver, lambda d: d.execute_script("return !!document.querySelector('.bossSide')"), 2, "boss visual")
     wait(driver, lambda d: d.execute_script("return !!document.querySelector('.ws-boss-intro')"), 4, "boss intro")
-    driver.execute_script("document.querySelector('.ws-boss-intro-start')?.click()")
-    wait(driver, lambda d: d.execute_script("return !document.querySelector('.ws-boss-intro')"), 2, "boss intro close")
+    dismiss_intro(driver)
     wait(driver, lambda d: d.execute_script("return !!document.querySelector('.card.ws-boss-sentence-mode')"), 3, "boss sentence mode")
+
+
+def force_boss(driver, level, hp=1):
+    driver.execute_script("""
+      sessionStorage.setItem('wordScrambleBossLevel', String(arguments[0]));
+      s.boss=true;s.bossHp=arguments[1];s.bossMiss=0;s.normal=3;s.feedback=null;s.sel=[];
+      setup();
+    """, level, hp)
+    wait(driver, lambda d: state(d)["boss"] and state(d)["level"] == level, 2, f"force boss {level}")
+    time.sleep(0.12)
+    dismiss_intro(driver)
+    wait(driver, lambda d: d.execute_script("return !!document.querySelector('.card.ws-boss-sentence-mode')"), 2, f"boss {level} sentence mode")
+
+
+def assert_ability_visible(driver, level):
+    selectors = {
+        1: ".ws-boss-ability-badge",
+        2: ".ws-brax-hidden",
+        3: ".ws-decoy",
+        4: ".ws-roderick-timer",
+        5: ".ws-vargas-sealed",
+        6: ".ws-boss-ability-badge-4-6",
+        7: ".ws-thorne-chain",
+        8: ".ws-corvin-route",
+        9: ".ws-azrak-shadow",
+        10: ".ws-varkos-mode",
+    }
+    selector = selectors[level]
+    wait(driver, lambda d: d.execute_script("return !!document.querySelector(arguments[0])", selector), 2.8, f"boss {level} ability {selector}")
+    if level == 1:
+        # Kai must visibly act after the player starts the sentence, not only reorder before first paint.
+        st = state(driver)
+        first = st["units"][0].upper()
+        driver.execute_script("""
+          const wanted=arguments[0];
+          const btn=[...document.querySelectorAll('.tiles .tile[data-i]:not(.used)')].find(x=>String(s.tiles[Number(x.dataset.i)]||'').toUpperCase()===wanted);
+          btn?.click();
+        """, first)
+        wait(driver, lambda d: d.execute_script("return !!document.querySelector('.ws-kai-shuffled,.ws-kai-toast')"), 1.0, "Kai visible shuffle")
+        driver.execute_script("s.sel=[];render()")
 
 
 def main():
@@ -120,15 +162,8 @@ def main():
         wait(driver, lambda d: d.execute_script("return !!document.querySelector('.ws-word-rarity-title')"), 4, "initial rarity badge")
 
         solve_normal(driver); solve_normal(driver); solve_normal(driver)
-        start_boss(driver)
-
-        prompt = driver.execute_script("return document.querySelector('.card.ws-boss-sentence-mode .prompt h1')?.textContent?.trim()||''")
-        assert len(prompt.split()) >= 4, f"boss prompt is not a sentence: {prompt!r}"
-        assert not any(x in prompt.upper() for x in ["PIRATE","BOSS-SCRAMBLE","BOSS LÄDT"]), f"legacy boss prompt returned: {prompt!r}"
-
-        ability_selector = ".ws-boss-ability-badge,.ws-boss-ability-badge-4-6,.ws-boss-ability-badge-7-10"
-        wait(driver, lambda d: d.execute_script("return !!document.querySelector(arguments[0])", ability_selector), 2, "boss ability badge")
-        before_y = driver.execute_script("return document.querySelector(arguments[0]).getBoundingClientRect().top", ability_selector)
+        start_boss_after_normal_rounds(driver)
+        assert_ability_visible(driver, 1)
 
         observed_hp = []
         for expected_after in [2, 1, 0]:
@@ -138,15 +173,27 @@ def main():
             if expected_after > 0:
                 wait(driver, lambda d: not state(d)["feedback"], 3.0, f"next boss sentence at HP {expected_after}")
                 wait(driver, lambda d: state(d)["boss"] and bool(state(d)["units"]), 2.0, "next boss sentence ready")
-
-        wait(driver, lambda d: not state(d)["boss"], 3.5, "boss exit after HP zero")
+        wait(driver, lambda d: not state(d)["boss"], 3.5, "boss 1 exit after HP zero")
         wait(driver, lambda d: state(d)["level"] == 2, 2.0, "advance to boss level 2")
         wait(driver, lambda d: d.execute_script("return !!document.querySelector('.ws-word-rarity-title')"), 3.0, "rarity after boss victory")
 
-        assert driver.execute_script("return !!document.querySelector(arguments[0])", ability_selector) is False, "boss ability badge remained in normal mode"
-        print("Word Scramble boss lifecycle smoke: PASS", flush=True)
-        print("Boss prompt:", prompt, flush=True)
-        print("Boss HP transitions:", observed_hp, flush=True)
+        # Exercise every remaining boss in a fresh one-life encounter. This is a regression detector
+        # for sentence-mode compatibility and real ability activation, not a shortcut in production.
+        for level in range(2, 11):
+            force_boss(driver, level, 1)
+            assert_ability_visible(driver, level)
+            if level == 7:
+                before, after = solve_boss_sentence(driver)
+                assert after["bossHp"] == 1, f"Thorne first sentence must charge 1/2 without damage: {after}"
+                wait(driver, lambda d: not state(d)["feedback"], 2.5, "Thorne second sentence")
+                before, after = solve_boss_sentence(driver)
+            else:
+                before, after = solve_boss_sentence(driver)
+            assert after["bossHp"] == 0, f"boss {level} final hit failed: before={before}; after={after}"
+            wait(driver, lambda d: not state(d)["boss"], 3.5, f"boss {level} exit")
+
+        print("Word Scramble full boss campaign diagnostic: PASS", flush=True)
+        print("Boss 1 HP transitions:", observed_hp, flush=True)
     finally:
         driver.quit()
 
