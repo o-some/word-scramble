@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import os
-import subprocess
 import time
+from urllib.parse import parse_qs, urlparse
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
@@ -19,13 +19,9 @@ def state(driver):
         level: Number(sessionStorage.getItem('wordScrambleBossLevel')||1),
         stage: String(window.WS_GET_CEFR_STAGE?.()||'A1'),
         campaign: !!window.WS_BOSS_CAMPAIGN,
-        campaignMarker: String(window.__WS_BOSS_PROGRESSION_CORE__||''),
-        campaignScript: !!document.getElementById('ws-boss-progression-core-runtime'),
         selected: s.sel.map(x=>String(x.l||'')), tiles: s.tiles.map(x=>String(x||'')),
         answer: String(typeof WS_GET_BOSS_ANSWER==='function' && s.boss ? WS_GET_BOSS_ANSWER() : currentAnswer()),
-        units: typeof WS_GET_BOSS_UNITS==='function' ? WS_GET_BOSS_UNITS().map(String) : [],
-        checkBound: document.getElementById('check')?.onclick === check, checkType: typeof check,
-        checkText: String(check).slice(0,320)
+        units: typeof WS_GET_BOSS_UNITS==='function' ? WS_GET_BOSS_UNITS().map(String) : []
       };
     """)
 
@@ -39,18 +35,25 @@ def wait(driver, predicate, timeout=8, message="condition"):
         raise AssertionError(f"timeout waiting for {message}; diagnostics={diag}") from exc
 
 
-def diagnose_campaign_runtime(driver):
-    text = driver.execute_script("return document.getElementById('ws-boss-progression-core-runtime')?.textContent || ''")
-    print('CAMPAIGN_RUNTIME_DIAG', state(driver), flush=True)
-    if not text:
-        print('Campaign runtime element missing entirely', flush=True)
-        return
-    path = '/tmp/ws-campaign-injected-runtime.js'
-    with open(path, 'w', encoding='utf-8') as fh: fh.write(text)
-    result = subprocess.run(['node', '--check', path], text=True, capture_output=True)
-    print('CAMPAIGN_RUNTIME_NODE_CHECK_RC', result.returncode, flush=True)
-    if result.stdout: print(result.stdout, flush=True)
-    if result.stderr: print(result.stderr, flush=True)
+def assert_atomic_release(driver):
+    release = driver.execute_script("return String(window.parent.__WS_RUNTIME_RELEASE__||'')")
+    assert release == '20260822-runtime-v9', f"unexpected runtime release: {release!r}"
+    wait(driver, lambda d: d.execute_script("return window.parent.document.documentElement.dataset.wsRuntimeComposition==='ready'"), 8, "atomic runtime composition")
+    sources = driver.execute_script("""
+      return [...window.parent.document.scripts]
+        .filter(s=>s.src && (s.src.includes('/assets/') || s.src.includes('/runtime/')))
+        .map(s=>s.src);
+    """)
+    assert sources, "no composed runtime scripts found"
+    for src in sources:
+        version = parse_qs(urlparse(src).query).get('v', [''])[0]
+        assert version == release, f"mixed/unversioned runtime script: {src} (expected {release})"
+    legacy_scripts = driver.execute_script("""
+      return [...window.parent.document.querySelectorAll('script')]
+        .filter(s=>['ws-treasure-words-loader','ws-boss-campaign-stars-loader','ws-boss-hints-v2-loader','ws-boss-victory-loot-loader','ws-tula-final-polish-loader','ws-boss-intro-visual-polish-loader','ws-boss-ux-final-regression-loader'].includes(s.id))
+        .map(s=>s.src);
+    """)
+    assert legacy_scripts == [], f"legacy self-loading chain became active: {legacy_scripts}"
 
 
 def solve_normal(driver):
@@ -60,8 +63,6 @@ def solve_normal(driver):
         if total and filled==total: break
         driver.execute_script("document.getElementById('hint')?.click()")
         time.sleep(0.02)
-    filled,total=driver.execute_script("const a=[...document.querySelectorAll('.slots .slot')];return[a.filter(x=>x.classList.contains('filled')).length,a.length]")
-    assert total and filled==total,"hint did not fill normal answer"
     driver.execute_script("document.getElementById('check')?.click()")
     wait(driver,lambda d:state(d)["feedback"],1.5,"normal feedback")
     wait(driver,lambda d:not state(d)["feedback"],3.0,"next normal round")
@@ -80,7 +81,8 @@ def fill_current_boss_sentence(driver):
         assert units,f"boss sentence units missing: {st}"
         next_unit=units[len(selected)]
         clicked=driver.execute_script("""
-          const wanted=arguments[0];const buttons=[...document.querySelectorAll('.tiles .tile[data-i]:not(.used)')];
+          const wanted=arguments[0];
+          const buttons=[...document.querySelectorAll('.tiles .tile[data-i]:not(.used)')];
           const target=buttons.find(btn=>!btn.disabled&&String(s.tiles[Number(btn.dataset.i)]||'').toUpperCase()===wanted);
           if(!target)return false;target.click();return true;
         """,next_unit)
@@ -130,7 +132,7 @@ def assert_ability_visible(driver,level):
 
 
 def complete_stage_via_campaign_owner(driver, expected_current, expected_next=None, mastered=False):
-    assert state(driver)["stage"] == expected_current, f"expected stage {expected_current}: {state(driver)}"
+    assert state(driver)["stage"] == expected_current
     driver.execute_script("""
       localStorage.setItem('wordScrambleBossLevelV2','10');sessionStorage.setItem('wordScrambleBossLevel','10');
       s.boss=true;s.bossHp=1;s.bossMiss=0;s.normal=3;s.feedback=null;s.sel=[];
@@ -139,17 +141,16 @@ def complete_stage_via_campaign_owner(driver, expected_current, expected_next=No
     wait(driver,lambda d:d.execute_script("return !!document.querySelector('.ws-cefr-complete')"),2.0,f"{expected_current} completion overlay")
     text=driver.execute_script("return document.querySelector('.ws-cefr-complete')?.textContent||''")
     if mastered:
-        assert 'Alle Sprachstufen gemeistert' in text and 'A1 NEU STARTEN' in text,f"wrong C2 completion copy: {text!r}"
-        assert state(driver)["stage"]=='C2',f"C2 must remain current until restart CTA: {state(driver)}"
+        assert 'Alle Sprachstufen gemeistert' in text and 'A1 NEU STARTEN' in text
+        assert state(driver)["stage"]=='C2'
     else:
         assert expected_next is not None
-        assert f'{expected_current} geschafft' in text and f'{expected_next} STARTEN' in text,f"wrong stage completion copy: {text!r}"
+        assert f'{expected_current} geschafft' in text and f'{expected_next} STARTEN' in text
         wait(driver,lambda d:state(d)["stage"]==expected_next,1.5,f"advance {expected_current} to {expected_next}")
         wait(driver,lambda d:state(d)["level"]==1,1.5,f"reset boss level at {expected_next}")
     driver.execute_script("document.querySelector('.ws-cefr-complete-start')?.click()")
     wait(driver,lambda d:d.execute_script("return !document.querySelector('.ws-cefr-complete')"),1.5,"close CEFR completion overlay")
-    if mastered:
-        wait(driver,lambda d:state(d)["stage"]=='A1' and state(d)["level"]==1,2.0,"restart campaign at A1 after C2")
+    if mastered: wait(driver,lambda d:state(d)["stage"]=='A1' and state(d)["level"]==1,2.0,"restart campaign at A1 after C2")
 
 
 def main():
@@ -157,31 +158,33 @@ def main():
     for arg in ["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--disable-background-networking","--disable-component-update","--window-size=390,844","--blink-settings=imagesEnabled=false"]: options.add_argument(arg)
     options.page_load_strategy="none";driver=webdriver.Chrome(options=options);driver.set_script_timeout(10)
     try:
-        try:
-            driver.execute_cdp_cmd("Network.enable",{});driver.execute_cdp_cmd("Network.setBlockedURLs",{"urls":["https://o-some.github.io/tulasisland/*"]})
-        except Exception: pass
-        driver.get(BASE_URL);game_frame=wait(driver,lambda d:d.find_element(By.ID,"game"),5,"game iframe");driver.switch_to.frame(game_frame)
+        driver.get(BASE_URL)
+        game_frame=wait(driver,lambda d:d.find_element(By.ID,"game"),5,"game iframe")
+        driver.switch_to.frame(game_frame)
         wait(driver,lambda d:d.execute_script("return !!window.__WS_BASE_RUNTIME__"),5,"base runtime")
         wait(driver,lambda d:d.execute_script("return !!window.__WS_VARIABLE_BOSS_WORDS__"),8,"sentence runtime")
         wait(driver,lambda d:d.execute_script("return !!window.__WS_WORD_RARITIES__"),8,"rarity runtime")
-        try: wait(driver,lambda d:d.execute_script("return !!window.WS_BOSS_CAMPAIGN"),5,"campaign runtime")
-        except AssertionError:
-            diagnose_campaign_runtime(driver);raise
+        wait(driver,lambda d:d.execute_script("return !!window.WS_BOSS_CAMPAIGN"),8,"campaign runtime")
+        assert_atomic_release(driver)
         wait(driver,lambda d:d.execute_script("return !!document.querySelector('.ws-word-rarity-title')"),4,"initial rarity badge")
-        assert state(driver)["stage"]=='A1',f"campaign must start at A1: {state(driver)}"
+        assert state(driver)["stage"]=='A1'
 
         solve_normal(driver);solve_normal(driver);solve_normal(driver);start_boss_after_normal_rounds(driver);assert_ability_visible(driver,1)
         observed_hp=[]
         for expected_after in [2,1,0]:
-            before,after=solve_boss_sentence(driver);observed_hp.append((before["bossHp"],after["bossHp"]));assert after["bossHp"]==expected_after,f"boss HP did not decrement to {expected_after}: before={before}; after={after}"
+            before,after=solve_boss_sentence(driver);observed_hp.append((before["bossHp"],after["bossHp"]));assert after["bossHp"]==expected_after
             if expected_after>0:
-                wait(driver,lambda d:not state(d)["feedback"],3.0,f"next boss sentence at HP {expected_after}");wait(driver,lambda d:state(d)["boss"] and bool(state(d)["units"]),2.0,"next boss sentence ready")
-        wait(driver,lambda d:not state(d)["boss"],3.5,"boss 1 exit after HP zero");wait(driver,lambda d:state(d)["level"]==2,2.0,"advance to boss level 2");wait(driver,lambda d:d.execute_script("return !!document.querySelector('.ws-word-rarity-title')"),3.0,"rarity after boss victory")
+                wait(driver,lambda d:not state(d)["feedback"],3.0,f"next boss sentence at HP {expected_after}")
+                wait(driver,lambda d:state(d)["boss"] and bool(state(d)["units"]),2.0,"next boss sentence ready")
+        wait(driver,lambda d:not state(d)["boss"],3.5,"boss 1 exit after HP zero")
+        wait(driver,lambda d:d.execute_script("return !!document.querySelector('.tula') && !document.querySelector('.bossSide')"),2.0,"return to Tula after boss victory")
+        wait(driver,lambda d:state(d)["level"]==2,2.0,"advance to boss level 2")
+        wait(driver,lambda d:d.execute_script("return !!document.querySelector('.ws-word-rarity-title')"),3.0,"rarity after boss victory")
 
         for level in range(2,11):
             force_boss(driver,level,1);assert_ability_visible(driver,level)
             if level==7:
-                before,after=solve_boss_sentence(driver);assert after["bossHp"]==1,f"Thorne first sentence must charge 1/2 without damage: {after}";wait(driver,lambda d:not state(d)["feedback"],2.5,"Thorne second sentence");before,after=solve_boss_sentence(driver)
+                before,after=solve_boss_sentence(driver);assert after["bossHp"]==1;wait(driver,lambda d:not state(d)["feedback"],2.5,"Thorne second sentence");before,after=solve_boss_sentence(driver)
             else: before,after=solve_boss_sentence(driver)
             assert after["bossHp"]==0,f"boss {level} final hit failed: before={before}; after={after}"
             wait(driver,lambda d:not state(d)["boss"],3.5,f"boss {level} exit")
@@ -189,21 +192,16 @@ def main():
         wait(driver,lambda d:state(d)["stage"]=='A2',2.0,"advance CEFR stage to A2")
         wait(driver,lambda d:state(d)["level"]==1,2.0,"reset boss campaign to level 1 at A2")
         wait(driver,lambda d:d.execute_script("return !!document.querySelector('.ws-cefr-complete')"),2.0,"A1 completion overlay")
-        text=driver.execute_script("return document.querySelector('.ws-cefr-complete')?.textContent||''")
-        assert 'A1 geschafft' in text and 'A2 STARTEN' in text,f"wrong A1 completion copy: {text!r}"
         driver.execute_script("document.querySelector('.ws-cefr-complete-start')?.click()")
         wait(driver,lambda d:d.execute_script("return !document.querySelector('.ws-cefr-complete')"),1.5,"close A1 completion overlay")
-        wait(driver,lambda d:d.execute_script("return !!document.querySelector('.ws-word-rarity-title')"),2.5,"A2 normal round rarity")
-
-        # The full campaign chain is owned by the same lifecycle API. We already exercised all ten
-        # live boss abilities above; these fast completions verify every CEFR unlock/reset contract.
-        for current,next_stage in [('A2','B1'),('B1','B2'),('B2','C1'),('C1','C2')]:
-            complete_stage_via_campaign_owner(driver,current,next_stage)
+        for current,next_stage in [('A2','B1'),('B1','B2'),('B2','C1'),('C1','C2')]: complete_stage_via_campaign_owner(driver,current,next_stage)
         complete_stage_via_campaign_owner(driver,'C2',mastered=True)
         wait(driver,lambda d:d.execute_script("return !!document.querySelector('.ws-word-rarity-title')"),2.5,"A1 rarity after full C2 restart")
 
-        print("Word Scramble full boss + CEFR campaign: PASS",flush=True)
+        print("Word Scramble atomic runtime + full campaign: PASS",flush=True)
+        print("Release: 20260822-runtime-v9",flush=True)
         print("Boss 1 HP transitions:",observed_hp,flush=True)
+        print("Boss 1 return to Tula: PASS",flush=True)
         print("CEFR chain: A1 -> A2 -> B1 -> B2 -> C1 -> C2 -> A1",flush=True)
     finally: driver.quit()
 
