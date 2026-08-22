@@ -36,8 +36,10 @@ for (const stage of ['A1','A2','B1','B2','C1','C2']) {
   assert.ok(progression.includes(stage), `campaign stage missing: ${stage}`);
 }
 assert.match(sentences, /const campaign=window\.WS_BOSS_CAMPAIGN/, 'boss sentence runtime must bind the authoritative campaign lifecycle');
-assert.match(sentences, /campaign\?\.hit\(\)/, 'boss sentence success must use the authoritative campaign hit owner');
-assert.match(sentences, /campaign\?\.finishTurn\(\)/, 'boss sentence completion must use the authoritative campaign completion owner');
+assert.match(sentences, /campaign\?\.hit/, 'boss sentence success must use the authoritative campaign hit owner');
+assert.match(sentences, /campaign\.hit\(\)/, 'boss sentence success must invoke the authoritative campaign hit owner');
+assert.match(sentences, /campaign\?\.finishTurn/, 'boss sentence completion must use the authoritative campaign completion owner');
+assert.match(sentences, /campaign\.finishTurn\(\)/, 'boss sentence completion must invoke the authoritative campaign completion owner');
 assert.doesNotMatch(sentences, /currentLevel\(\)===7/, 'sentence runtime must not duplicate Thorne ability ownership');
 
 assert.doesNotMatch(abilities710, /const answer=['"]PIRATE['"]/, 'Thorne must never use the legacy PIRATE answer');
