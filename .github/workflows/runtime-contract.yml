@@ -11,6 +11,7 @@ permissions:
 jobs:
   runtime-contract:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,6 +31,8 @@ jobs:
             assets/patches/boss-ux-final-regression.js; do
               node --check "$file"
           done
+      - name: Install browser test driver
+        run: python3 -m pip install --quiet selenium==4.35.0
       - name: Run cold-start browser smoke
         shell: bash
         run: |
@@ -41,13 +44,10 @@ jobs:
           python3 -m http.server 4173 >/tmp/word-scramble-http.log 2>&1 &
           SERVER_PID=$!
           trap 'kill $SERVER_PID || true' EXIT
-          SMOKE_URL=http://127.0.0.1:4173/word-scramble/tests/browser-smoke.html
+          SMOKE_URL=http://127.0.0.1:4173/word-scramble/index.html?runtime-smoke=1
           for i in {1..30}; do
             if curl -fsS "$SMOKE_URL" >/dev/null; then break; fi
             sleep 0.2
           done
-          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
-          test -n "$CHROME"
-          "$CHROME" --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=18000 --dump-dom "$SMOKE_URL" > /tmp/word-scramble-smoke.html
-          cat /tmp/word-scramble-smoke.html
-          grep -q 'data-status="pass"' /tmp/word-scramble-smoke.html
+          export WS_SMOKE_URL="$SMOKE_URL"
+          timeout 75s python3 "$GITHUB_WORKSPACE/tests/browser-smoke.py"
