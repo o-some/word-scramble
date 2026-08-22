@@ -5,7 +5,8 @@
   if(!frame)return;
 
   const assets={
-    waving:'https://o-some.github.io/tulasisland/assets/creative/tula_waving.webp',
+    neutral:'https://o-some.github.io/tulasisland/assets/creative/tula_neutral_front.webp',
+    happy:'https://o-some.github.io/tulasisland/assets/creative/tula_happy.webp',
     celebrating:'https://o-some.github.io/tulasisland/assets/creative/tula_celebrating.webp',
     surprised:'https://o-some.github.io/tulasisland/assets/creative/tula_surprised.webp'
   };
@@ -56,8 +57,8 @@
         const img=document.querySelector('.tula');
         const bubble=document.querySelector('.side .bubble');
         if(!img||!bubble)return;
-        let key='idle:'+s.i+':'+s.normal,src=assets.waving,text='Los geht’s!',cls='';
-        const rarity=(document.querySelector('.ws-word-rarity')?.textContent||'').toUpperCase();
+        let key='idle:'+s.i+':'+s.normal,src=assets.neutral,text='Los geht’s!',cls='';
+        const rarity=(document.querySelector('.ws-word-rarity-title')?.textContent||'').trim().toUpperCase();
         const treasure=Boolean(document.querySelector('.ws-treasure-badge'));
         if(s.feedback){
           key='feedback:'+s.i+':'+s.normal+':'+Boolean(s.feedback.ok)+':'+s.lives;
@@ -65,13 +66,13 @@
           else if(Number(s.lives)<=0){src=assets.surprised;text='Kopf hoch – neuer Versuch!';cls='ws-tula-wobble';}
           else{src=assets.surprised;text='Fast – versuch’s nochmal!';cls='ws-tula-wobble';}
         }else if(treasure){
-          key='treasure:'+s.i+':'+s.normal;src=assets.celebrating;text='Da ist ein Schatz! 🗝';cls='ws-tula-pop ws-tula-glow';
-        }else if(rarity.includes('LEGENDÄR')){
-          key='legendary:'+s.i+':'+s.normal;src=assets.celebrating;text='Legendäres Wort! 👑';cls='ws-tula-pop ws-tula-glow';
-        }else if(rarity.includes('EPISCH')||rarity.includes('SELTEN')){
-          key='rare:'+s.i+':'+s.normal;src=assets.celebrating;text='Seltenes Wort – stark!';cls='ws-tula-pop';
+          key='treasure:'+s.i+':'+s.normal;src=assets.happy;text='Schatzwort entdeckt! 🗝';
+        }else if(rarity==='EPISCHES WORT'){
+          key='epic:'+s.i+':'+s.normal;src=assets.happy;text='Episches Wort! 💎';
+        }else if(rarity==='GOLD-WORT'||rarity==='SILBER-WORT'||rarity==='BRONZE-WORT'){
+          key='special:'+s.i+':'+s.normal+':'+rarity;src=assets.happy;text='Besonderes Wort!';
         }else if(Number(s.combo)>=5){
-          key='combo:'+s.i+':'+s.normal+':'+s.combo;src=assets.celebrating;text='🔥 Combo x'+s.combo+'!';cls='ws-tula-pop';
+          key='combo:'+s.i+':'+s.normal+':'+s.combo;src=assets.happy;text='🔥 Combo x'+s.combo+'!';
         }
         img.src=src;
         bubble.textContent=text;
@@ -86,7 +87,7 @@
         clearTimeout(toastTimer);
         const toast=document.createElement('div');
         toast.className='ws-tula-toast';
-        const src=type==='hit'?assets.celebrating:type==='miss'?assets.surprised:assets.waving;
+        const src=type==='hit'?assets.celebrating:type==='miss'?assets.surprised:assets.neutral;
         toast.innerHTML='<img src="'+src+'" alt=""><div><b>TULA</b><span>'+text+'</span></div>';
         document.body.appendChild(toast);
         toastTimer=setTimeout(()=>toast.remove(),980);
