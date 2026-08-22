@@ -4,7 +4,8 @@
   const frame=document.getElementById('game');
   if(!frame)return;
 
-  const RELEASE='20260822-runtime-single-owner-5';
+  const RELEASE='20260822-local-base-runtime-6';
+  const LOCAL_BASE_URL=new URL('./runtime/base.html?v='+RELEASE,location.href).href;
   const introMeta={
     1:{ability:'Deckschrubber-Trick',description:'Kai mischt die Wort-Kacheln deiner Satzübersetzung zusätzlich durch. Die Lösung bleibt vollständig möglich.'},
     2:{ability:'Verdecktes Wort',description:'Brax verdeckt zeitweise eine ganze Wort-Kachel. Der vollständige Satz bleibt trotzdem lösbar.'},
@@ -53,9 +54,24 @@
   let attempts=0;
 
   const getFrameDoc=()=>{try{return frame.contentDocument||null}catch{return null}};
+  const isLocalBase=()=>{
+    try{return new URL(frame.src,location.href).pathname.endsWith('/word-scramble/runtime/base.html')}catch{return false}
+  };
+  function ensureLocalBase(){
+    if(isLocalBase())return true;
+    if(frame.dataset.wsRuntimeSource!=='localizing'){
+      frame.dataset.wsRuntimeSource='localizing';
+      frame.style.visibility='hidden';
+      frame.src=LOCAL_BASE_URL;
+    }
+    return false;
+  }
   const frameReady=()=>{
+    if(!ensureLocalBase())return false;
     const doc=getFrameDoc();
-    return Boolean(doc?.documentElement&&doc.body&&doc.getElementById('game')&&doc.querySelector('.card'));
+    let baseReady=false;
+    try{baseReady=Boolean(frame.contentWindow?.__WS_BASE_RUNTIME__)}catch{}
+    return Boolean(baseReady&&doc?.documentElement&&doc.body&&doc.getElementById('game')&&doc.querySelector('.card'));
   };
 
   function ensureStyles(doc){
@@ -102,12 +118,12 @@
   }
 
   function installAbilityRuntime(doc){
-    if(!doc?.documentElement||doc.getElementById('ws-boss-abilities-1-3-runtime-v3'))return;
+    if(!doc?.documentElement||doc.getElementById('ws-boss-abilities-1-3-runtime-v4'))return;
     const runtime=doc.createElement('script');
-    runtime.id='ws-boss-abilities-1-3-runtime-v3';
+    runtime.id='ws-boss-abilities-1-3-runtime-v4';
     runtime.textContent=`(()=>{
-      if(window.__WS_BOSS_ABILITIES_1_3_V3__)return;
-      window.__WS_BOSS_ABILITIES_1_3_V3__='${RELEASE}';
+      if(window.__WS_BOSS_ABILITIES_1_3_V4__)return;
+      window.__WS_BOSS_ABILITIES_1_3_V4__='${RELEASE}';
       const abilityNames={1:'Deckschrubber-Trick',2:'Verdecktes Wort',3:'Köderwort'};
       const alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
       const baseRender=render;
@@ -214,22 +230,24 @@
   function assertRuntimeContracts(){
     const win=frame.contentWindow;
     const checks=[
+      ['local-base',Boolean(win?.__WS_BASE_RUNTIME__)],
       ['boss-sentences',Boolean(win?.__WS_VARIABLE_BOSS_WORDS__)],
       ['boss-abilities-4-6',Boolean(win?.__WS_BOSS_ABILITIES_4_6__)],
       ['boss-abilities-7-10',Boolean(win?.__WS_BOSS_ABILITIES_7_10__)],
       ['word-rarities',Boolean(win?.__WS_WORD_RARITIES__)],
-      ['boss-abilities-1-3',Boolean(win?.__WS_BOSS_ABILITIES_1_3_V3__)]
+      ['boss-abilities-1-3',Boolean(win?.__WS_BOSS_ABILITIES_1_3_V4__)]
     ];
     const missing=checks.filter(([,ok])=>!ok).map(([name])=>name);
     if(missing.length)throw new Error('Runtime contract incomplete: '+missing.join(', '));
   }
 
   function showFailure(message){
+    frame.style.visibility='hidden';
     let overlay=document.getElementById('ws-runtime-failure');
-    if(!overlay){overlay=document.createElement('div');overlay.id='ws-runtime-failure';overlay.style.cssText='position:fixed;z-index:9999;inset:0;display:grid;place-items:center;padding:20px;background:#02192df2;color:#fff0bd;font-family:Inter,-apple-system,BlinkMacSystemFont,system-ui,sans-serif';overlay.innerHTML='<div style="width:min(420px,100%);padding:22px;border:1px solid #efc766;border-radius:22px;background:#032d4b;text-align:center;box-shadow:0 25px 60px #0008"><b style="display:block;font-size:1.1rem;margin-bottom:8px">Spiel konnte nicht vollständig starten</b><span style="display:block;color:#d8eeee;font-size:.78rem;line-height:1.45">Die vollständige Spiel-Runtime wurde nicht geladen. Die alte Basisversion wird aus Sicherheitsgründen nicht verwendet.</span><button type="button" style="width:100%;min-height:48px;margin-top:16px;border:1px solid #fff0a8;border-radius:14px;background:linear-gradient(#ffe895,#e3b13d);color:#092f4b;font-weight:900">Neu laden</button></div>';overlay.querySelector('button').onclick=()=>location.reload();document.body.appendChild(overlay);}
+    if(!overlay){overlay=document.createElement('div');overlay.id='ws-runtime-failure';overlay.style.cssText='position:fixed;z-index:9999;inset:0;display:grid;place-items:center;padding:20px;background:#02192df2;color:#fff0bd;font-family:Inter,-apple-system,BlinkMacSystemFont,system-ui,sans-serif';overlay.innerHTML='<div style="width:min(420px,100%);padding:22px;border:1px solid #efc766;border-radius:22px;background:#032d4b;text-align:center;box-shadow:0 25px 60px #0008"><b style="display:block;font-size:1.1rem;margin-bottom:8px">Spiel konnte nicht vollständig starten</b><span style="display:block;color:#d8eeee;font-size:.78rem;line-height:1.45">Die lokale Spiel-Runtime wurde nicht vollständig geladen. Eine alte Preview-Version wird nicht als Ersatz verwendet.</span><button type="button" style="width:100%;min-height:48px;margin-top:16px;border:1px solid #fff0a8;border-radius:14px;background:linear-gradient(#ffe895,#e3b13d);color:#092f4b;font-weight:900">Neu laden</button></div>';overlay.querySelector('button').onclick=()=>location.reload();document.body.appendChild(overlay);}
     overlay.dataset.reason=String(message||'runtime-incomplete').slice(0,180);
   }
-  function clearFailure(){document.getElementById('ws-runtime-failure')?.remove();}
+  function clearFailure(){document.getElementById('ws-runtime-failure')?.remove();frame.style.visibility='visible';frame.dataset.wsRuntimeSource='local-ready';}
 
   async function bootstrapRuntime(){
     if(pipelineStarted||!frameReady())return false;
@@ -251,13 +269,16 @@
   function watchUntilReady(){
     if(pipelineStarted)return;
     attempts++;
+    ensureLocalBase();
     if(frameReady()){bootstrapRuntime();return;}
     const doc=getFrameDoc();
     if(doc&&doc!==observedDoc){observedDoc=doc;readyObserver?.disconnect();const target=doc.getElementById('game')||doc.documentElement;if(target){readyObserver=new MutationObserver(()=>bootstrapRuntime());readyObserver.observe(target,{childList:true,subtree:true});}}
-    if(attempts<120){clearTimeout(readyTimer);readyTimer=setTimeout(watchUntilReady,100);}else{document.documentElement.dataset.wsStableRuntime='failed';showFailure('timeout waiting for game frame');console.error('Word Scramble runtime bootstrap timed out');}
+    if(attempts<160){clearTimeout(readyTimer);readyTimer=setTimeout(watchUntilReady,100);}else{document.documentElement.dataset.wsStableRuntime='failed';showFailure('timeout waiting for local base runtime');console.error('Word Scramble local runtime bootstrap timed out');}
   }
 
   frame.addEventListener('load',()=>{
+    if(!isLocalBase()){ensureLocalBase();return;}
+    frame.dataset.wsRuntimeSource='localizing';
     const doc=getFrameDoc();
     if(doc){ensureStyles(doc);installIntroCopyObserver(doc);}
     if(!pipelineStarted){attempts=0;observedDoc=null;watchUntilReady();return;}
@@ -267,5 +288,6 @@
     },0);
   });
 
+  ensureLocalBase();
   watchUntilReady();
 })();

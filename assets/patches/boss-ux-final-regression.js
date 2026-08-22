@@ -26,36 +26,9 @@
     bridge.textContent=`(()=>{
       window.__WS_BOSS_ENCOUNTER_ACTIVE__=()=>{try{return Boolean(s&&s.boss)}catch{return false}};
       window.__WS_BOSS_FEEDBACK_ACTIVE__=()=>{try{return Boolean(s&&s.feedback)}catch{return false}};
-      window.__WS_RUNTIME_CORE_READY__=()=>Boolean(window.__WS_BOSS_ABILITIES_4_6__&&window.__WS_BOSS_ABILITIES_7_10__&&window.__WS_VARIABLE_BOSS_WORDS__&&window.__WS_WORD_RARITIES__);
+      window.__WS_RUNTIME_CORE_READY__=()=>Boolean(window.__WS_BASE_RUNTIME__&&window.__WS_BOSS_ABILITIES_4_6__&&window.__WS_BOSS_ABILITIES_7_10__&&window.__WS_VARIABLE_BOSS_WORDS__&&window.__WS_WORD_RARITIES__);
     })();`;
     doc.documentElement.appendChild(bridge);
-  }
-
-  function installRoundTransitionContract(doc){
-    if(doc.getElementById('ws-round-transition-contract'))return;
-    const runtime=doc.createElement('script');
-    runtime.id='ws-round-transition-contract';
-    runtime.textContent=`(()=>{
-      if(window.__WS_ROUND_TRANSITION_CONTRACT__)return;
-      window.__WS_ROUND_TRANSITION_CONTRACT__=true;
-      const BOSS_AFTER_NORMAL_ROUNDS=3;
-      const baseCheck=check;
-      check=function(){
-        let wasBoss=false,before=0;
-        try{wasBoss=Boolean(s&&s.boss);before=Math.max(0,Number(s&&s.normal)||0);}catch{}
-        const result=baseCheck();
-        try{
-          const after=Math.max(0,Number(s&&s.normal)||0);
-          const completedNormalRound=!wasBoss&&!s.boss&&after>before&&Boolean(s.feedback);
-          if(completedNormalRound&&after>=BOSS_AFTER_NORMAL_ROUNDS&&after<10&&Number(s.lives)>0){
-            s.normal=10;
-          }
-        }catch{}
-        return result;
-      };
-      try{bind();}catch{}
-    })();`;
-    doc.documentElement.appendChild(runtime);
   }
 
   function bossActive(win,doc){
@@ -142,13 +115,12 @@
       if(!doc?.head||!doc.body)return;
       ensureStyles(doc);
       installStateBridge(doc);
-      installRoundTransitionContract(doc);
       ensureStableAbilityBadge(doc);
       decorateBossInfo(doc);
       bindBossStart(doc);
       verifyCoreRuntime(doc);
-      if(doc.documentElement.dataset.wsBossUxFinalRegression==='7')return;
-      doc.documentElement.dataset.wsBossUxFinalRegression='7';
+      if(doc.documentElement.dataset.wsBossUxFinalRegression==='8')return;
+      doc.documentElement.dataset.wsBossUxFinalRegression='8';
       doc.addEventListener('click',event=>{
         if(event.target?.closest?.('.ws-boss-info-chip'))window.setTimeout(()=>{decorateBossInfo(doc);bindBossStart(doc);},0);
         ensureStableAbilityBadge(doc);

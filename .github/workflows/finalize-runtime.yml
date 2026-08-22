@@ -1,73 +1,28 @@
-name: Finalize Word Scramble standalone runtime
+name: Validate Word Scramble runtime source
 
 on:
   push:
     branches: [main]
     paths:
+      - 'index.html'
+      - 'runtime/**'
+      - 'assets/patches/**'
+      - 'tests/runtime-contract.mjs'
       - '.github/workflows/finalize-runtime.yml'
-      - '.migration/index.b64.part-*'
-      - 'FINALIZE_RUNTIME_TRIGGER'
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  finalize:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout current main
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Assemble standalone game
-        shell: bash
-        run: |
-          set -euo pipefail
-          cat .migration/index.b64.part-* | tr -d '\n\r' | base64 -d > index.html
-          python3 - <<'PY'
-          from pathlib import Path
-
-          path = Path('index.html')
-          text = path.read_text(encoding='utf-8')
-
-          boss_paths = {
-              'assets/bosses/level-01.webp': 'assets/bosses/level-01-pirat-kai.webp',
-              'assets/bosses/level-02.webp': 'assets/bosses/level-02-kapitaen-brax.webp',
-              'assets/bosses/level-03.webp': 'assets/bosses/level-03-blackfinn.webp',
-              'assets/bosses/level-04.webp': 'assets/bosses/level-04-alt-kapitaen-roderick.webp',
-              'assets/bosses/level-05.webp': 'assets/bosses/level-05-piratenbaron-vargas.webp',
-              'assets/bosses/level-06.webp': 'assets/bosses/level-06-kapitaen-ironhook.webp',
-              'assets/bosses/level-07.webp': 'assets/bosses/level-07-admiral-thorne.webp',
-              'assets/bosses/level-08.webp': 'assets/bosses/level-08-kartenmeister-corvin.webp',
-              'assets/bosses/level-09.webp': 'assets/bosses/level-09-schattenfuerst-azrak.webp',
-              'assets/bosses/level-10.webp': 'assets/bosses/level-10-piratenkoenig-varkos.webp',
-          }
-          for old, new in boss_paths.items():
-              text = text.replace(old, new)
-
-          # Transitional shared Tula/background assets remain on the main app until
-          # the final migration gate has verified their local copies.
-          text = text.replace("'/tulasisland/assets/creative/", "'https://o-some.github.io/tulasisland/assets/creative/")
-          text = text.replace('"/tulasisland/assets/creative/', '"https://o-some.github.io/tulasisland/assets/creative/')
-
-          # Standalone exit goes back to the Tula's Island menu.
-          text = text.replace("location.href='/tulasisland/'", "location.href='https://o-some.github.io/tulasisland/'")
-
-          path.write_text(text, encoding='utf-8')
-
-          assert '<iframe' not in text, 'iframe wrapper must not remain'
-          assert 'sel?sel.letter' in text, 'slot renderer must output letter only'
-          assert 'state.selected.map(x=>x.letter)' in text, 'answer builder must output letters only'
-          assert '[object Object]' not in text, 'object rendering regression detected'
-          assert 'level-01-pirat-kai.webp' in text
-          assert 'level-10-piratenkoenig-varkos.webp' in text
-          assert len(text) > 20000, 'assembled runtime unexpectedly small'
-          print(f'Assembled standalone runtime: {len(text)} chars')
-          PY
-
-      - name: Verify all boss assets exist
+      - name: Verify authoritative local runtime contracts
+        run: node tests/runtime-contract.mjs
+      - name: Verify boss assets exist
         shell: bash
         run: |
           set -euo pipefail
@@ -85,17 +40,3 @@ jobs:
               test -s "$file"
               file "$file" | grep -qi 'webp'
           done
-
-      - name: Commit final standalone runtime
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add index.html
-          if git diff --cached --quiet; then
-            echo 'Standalone runtime already finalized.'
-            exit 0
-          fi
-          git commit -m 'Finalize standalone Word Scramble runtime'
-          git push origin HEAD:main
