@@ -34,15 +34,20 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          SITE_ROOT=/tmp/word-scramble-site
+          mkdir -p "$SITE_ROOT/word-scramble"
+          tar --exclude=.git -cf - . | tar -C "$SITE_ROOT/word-scramble" -xf -
+          cd "$SITE_ROOT"
           python3 -m http.server 4173 >/tmp/word-scramble-http.log 2>&1 &
           SERVER_PID=$!
           trap 'kill $SERVER_PID || true' EXIT
+          SMOKE_URL=http://127.0.0.1:4173/word-scramble/tests/browser-smoke.html
           for i in {1..30}; do
-            if curl -fsS http://127.0.0.1:4173/tests/browser-smoke.html >/dev/null; then break; fi
+            if curl -fsS "$SMOKE_URL" >/dev/null; then break; fi
             sleep 0.2
           done
           CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
           test -n "$CHROME"
-          "$CHROME" --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=18000 --dump-dom http://127.0.0.1:4173/tests/browser-smoke.html > /tmp/word-scramble-smoke.html
+          "$CHROME" --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=18000 --dump-dom "$SMOKE_URL" > /tmp/word-scramble-smoke.html
           cat /tmp/word-scramble-smoke.html
           grep -q 'data-status="pass"' /tmp/word-scramble-smoke.html
