@@ -5,6 +5,7 @@ const read = path => fs.readFileSync(path, 'utf8');
 const index = read('index.html');
 const base = read('runtime/base.html');
 const bootstrap = read('assets/patches/boss-abilities-1-3.js');
+const lifecycleBridge = read('assets/patches/boss-intro-lifecycle-bridge.js');
 const abilities46 = read('assets/patches/boss-abilities-4-6.js');
 const abilities710 = read('assets/patches/boss-abilities-7-10.js');
 const bossUx = read('assets/patches/boss-ux-final-regression.js');
@@ -16,6 +17,8 @@ assert.match(index, /\.\/runtime\/base\.html/, 'production entrypoint must use t
 assert.doesNotMatch(index, /tulasisland\/word-scramble-preview/i, 'production entrypoint must not depend on the legacy preview runtime');
 assert.doesNotMatch(index, /syncBossTestTrigger|WS_BOSS_AFTER_WORDS/, 'legacy DOM-driven boss trigger must not return');
 assert.match(index, /boss-progression-core\.js/, 'boss progression core must be part of the production composition');
+assert.match(index, /boss-intro-lifecycle-bridge\.js/, 'boss intro close must have an explicit lifecycle bridge');
+assert.match(index, /20260822-boss-campaign-v8/, 'production entrypoint must cache-bust the current boss campaign runtime');
 
 assert.match(base, /__WS_BASE_RUNTIME__/, 'local base runtime contract missing');
 assert.match(base, /BOSS_AFTER_NORMAL_ROUNDS=3/, 'boss threshold must be owned by the base state machine at three normal rounds');
@@ -27,6 +30,8 @@ assert.match(bootstrap, /\['local-base'/, 'bootstrap must assert the local base 
 assert.match(bootstrap, /ws-stable-variable-boss-words/, 'sentence runtime must be in the deterministic pipeline');
 assert.match(bootstrap, /ws-stable-word-rarities/, 'rarity runtime must be in the deterministic pipeline');
 assert.match(bootstrap, /KAI MISCHT DIE ÜBRIGEN WÖRTER/, 'Kai must provide visible ability feedback after interaction');
+assert.match(lifecycleBridge, /ws-boss-intro-closed/, 'boss intro lifecycle event missing');
+assert.match(lifecycleBridge, /typeof render===['"]function['"]/, 'boss intro lifecycle must trigger the authoritative render path');
 assert.doesNotMatch(bossUx, /installRoundTransitionContract/, 'boss UX must not own gameplay transition state');
 
 assert.match(sentences, /const BOSS_SENTENCES=/, 'boss sentence pool missing');
@@ -50,7 +55,7 @@ assert.match(abilities46, /WS_BOSS_CAMPAIGN\?\.miss/, 'timed boss abilities must
 
 for (const label of ['STANDARD-WORT','BRONZE-WORT','SILBER-WORT','GOLD-WORT','EPISCHES WORT']) assert.ok(rarities.includes(label), `rarity label missing: ${label}`);
 assert.match(progression, /__WS_BOSS_PROGRESSION_CORE__/, 'boss progression core contract missing');
-assert.match(progression, /wordScrambleBossLevel/, 'boss progression storage contract missing');
+assert.match(progression, /wordScrambleBossLevelV2/, 'persistent boss progression storage contract missing');
 assert.match(progression, /WS_BOSS_CAMPAIGN=/, 'authoritative boss lifecycle API missing');
 assert.match(progression, /function hit\(/, 'boss hit owner missing');
 assert.match(progression, /function finishTurn\(/, 'boss encounter completion owner missing');
