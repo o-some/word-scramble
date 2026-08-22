@@ -35,20 +35,27 @@
       let trailTimer=0,anchorTimer=0;
 
       const currentAnswer=()=>typeof WS_GET_BOSS_ANSWER==='function'?String(WS_GET_BOSS_ANSWER()||'').toUpperCase():'';
+      const sentenceMode=()=>typeof WS_IS_BOSS_SENTENCE_MODE==='function'&&Boolean(WS_IS_BOSS_SENTENCE_MODE());
+      const currentUnits=()=>{
+        if(typeof WS_GET_BOSS_UNITS==='function'){
+          const value=WS_GET_BOSS_UNITS();
+          if(Array.isArray(value)&&value.length)return value.map(x=>String(x||'').toUpperCase());
+        }
+        return Array.from(currentAnswer());
+      };
       const currentLevel=()=>{const m=document.querySelector('.bossPlate')?.textContent?.match(/LEVEL\\s+(\\d+)/i);if(m)return Math.max(1,Math.min(10,Number(m[1])||1));try{return Math.max(1,Math.min(10,Number(sessionStorage.getItem('wordScrambleBossLevel')||1)));}catch{return 1;}};
-      const emitHint=type=>document.dispatchEvent(new CustomEvent('ws-hint-used',{detail:{type:type,level:currentLevel(),answerLength:currentAnswer().length}}));
+      const emitHint=type=>document.dispatchEvent(new CustomEvent('ws-hint-used',{detail:{type:type,level:currentLevel(),answerLength:currentUnits().length}}));
 
       function clearTrail(){clearTimeout(trailTimer);trailTimer=0;document.querySelectorAll('.ws-trail-candidate').forEach(el=>el.classList.remove('ws-trail-candidate'));document.querySelector('.ws-hint-note:not(.anchor)')?.remove();}
       function clearAnchor(){clearTimeout(anchorTimer);anchorTimer=0;document.querySelectorAll('.ws-anchor-ghost').forEach(el=>{el.classList.remove('ws-anchor-ghost');delete el.dataset.wsGhost;});document.querySelector('.ws-hint-note.anchor')?.remove();}
       function closeMenu(){document.querySelector('.ws-hint-menu')?.remove();}
       function cleanup(){closeMenu();clearTrail();clearAnchor();}
-
       function showNote(text,anchor){document.querySelectorAll('.ws-hint-note').forEach(el=>el.remove());const card=document.querySelector('.card');if(!card)return;const note=document.createElement('div');note.className='ws-hint-note'+(anchor?' anchor':'');note.textContent=text;card.appendChild(note);return note;}
 
       function trail(){
         closeMenu();clearTrail();
-        const target=currentAnswer(),next=target[s.sel.length];
-        if(!s.boss||!target||!next||s.feedback)return;
+        const units=currentUnits(),next=units[s.sel.length];
+        if(!s.boss||!next||s.feedback)return;
         const unused=Array.from(document.querySelectorAll('.tiles .tile[data-i]:not(.used)')).filter(btn=>!btn.disabled);
         const correct=unused.find(btn=>btn.textContent.trim().toUpperCase()===next);
         if(!correct)return;
@@ -57,32 +64,32 @@
         const picks=[correct,...others.slice(0,2)];
         for(let i=picks.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=picks[i];picks[i]=picks[j];picks[j]=t;}
         picks.forEach(btn=>btn.classList.add('ws-trail-candidate'));
-        showNote('🧭 Fährte: Der nächste Buchstabe ist einer der markierten Buchstaben.',false);
+        showNote(sentenceMode()?'🧭 Fährte: Das nächste Wort ist eines der markierten Wörter.':'🧭 Fährte: Der nächste Buchstabe ist einer der markierten Buchstaben.',false);
         emitHint('trail');
         trailTimer=setTimeout(clearTrail,2800);
       }
 
       function anchor(){
         closeMenu();clearAnchor();
-        const target=currentAnswer();
-        if(!s.boss||!target||s.feedback||Number(s.bossMiss)<2)return;
+        const units=currentUnits();
+        if(!s.boss||!units.length||s.feedback||Number(s.bossMiss)<2)return;
         const slots=Array.from(document.querySelectorAll('.slots .slot'));
-        const first=target[0]||'',last=target[target.length-1]||'';
+        const first=units[0]||'',last=units[units.length-1]||'';
         if(slots[0]&&!slots[0].classList.contains('filled')){slots[0].classList.add('ws-anchor-ghost');slots[0].dataset.wsGhost=first;}
-        const end=slots[target.length-1];
+        const end=slots[units.length-1];
         if(end&&!end.classList.contains('filled')){end.classList.add('ws-anchor-ghost');end.dataset.wsGhost=last;}
         showNote('⚓ Rettungsanker: START '+first+' · ENDE '+last,true);
         emitHint('anchor');
         anchorTimer=setTimeout(clearAnchor,3000);
       }
 
-      function letterHint(){
+      function unitHint(){
         closeMenu();cleanup();
-        const target=currentAnswer(),k=s.sel.length;
-        if(!s.boss||!target||k>=target.length||s.feedback)return;
-        const index=s.tiles.findIndex((letter,i)=>String(letter).toUpperCase()===target[k]&&!s.sel.some(v=>v.id===i));
+        const units=currentUnits(),k=s.sel.length;
+        if(!s.boss||!units.length||k>=units.length||s.feedback)return;
+        const index=s.tiles.findIndex((unit,i)=>String(unit).toUpperCase()===units[k]&&!s.sel.some(v=>v.id===i));
         if(index<0)return;
-        emitHint('letter');
+        emitHint(sentenceMode()?'word':'letter');
         s.sel.push({id:index,l:s.tiles[index]});
         render();
       }
@@ -90,23 +97,27 @@
       function openMenu(){
         if(document.querySelector('.ws-hint-menu')){closeMenu();return;}
         const card=document.querySelector('.card');if(!card)return;
+        const isSentence=sentenceMode();
         const menu=document.createElement('div');menu.className='ws-hint-menu';menu.setAttribute('role','menu');
-        menu.innerHTML='<button type="button" class="ws-hint-choice" data-h="trail"><b>🧭 Fährte</b>3 mögliche Buchstaben</button><button type="button" class="ws-hint-choice" data-h="anchor"><b>⚓ Anker</b>Start + Ende</button><button type="button" class="ws-hint-choice" data-h="letter"><b>💡 Buchstabe</b>setzt 1 Buchstaben</button>';
+        menu.innerHTML=isSentence
+          ?'<button type="button" class="ws-hint-choice" data-h="trail"><b>🧭 Fährte</b>3 mögliche Wörter</button><button type="button" class="ws-hint-choice" data-h="anchor"><b>⚓ Anker</b>Start + Ende</button><button type="button" class="ws-hint-choice" data-h="unit"><b>💡 Wort</b>setzt 1 Wort</button>'
+          :'<button type="button" class="ws-hint-choice" data-h="trail"><b>🧭 Fährte</b>3 mögliche Buchstaben</button><button type="button" class="ws-hint-choice" data-h="anchor"><b>⚓ Anker</b>Start + Ende</button><button type="button" class="ws-hint-choice" data-h="unit"><b>💡 Buchstabe</b>setzt 1 Buchstaben</button>';
         const anchorBtn=menu.querySelector('[data-h="anchor"]');if(anchorBtn){anchorBtn.disabled=Number(s.bossMiss)<2;anchorBtn.title=anchorBtn.disabled?'Nach 2 Bossfehlern verfügbar':'Rettungsanker verwenden';}
         menu.querySelector('[data-h="trail"]')?.addEventListener('click',trail);
         menu.querySelector('[data-h="anchor"]')?.addEventListener('click',anchor);
-        menu.querySelector('[data-h="letter"]')?.addEventListener('click',letterHint);
+        menu.querySelector('[data-h="unit"]')?.addEventListener('click',unitHint);
         card.appendChild(menu);
       }
 
       function enhanceBossHint(){
         const hint=document.getElementById('hint');
-        if(!hint||!s.boss||!currentAnswer())return;
+        if(!hint||!s.boss||!currentUnits().length)return;
         hint.classList.add('ws-boss-help-button');
         hint.classList.toggle('ws-hint-suggested',Number(s.bossMiss)>=1);
         hint.innerHTML='🧭<br>Hilfe';
         hint.setAttribute('aria-label','Boss-Hilfe öffnen');
-        hint.title=Number(s.bossMiss)>=2?'Fährte, Rettungsanker oder Buchstabe':'Fährte oder Buchstabe';
+        const unit=sentenceMode()?'Wort':'Buchstabe';
+        hint.title=Number(s.bossMiss)>=2?'Fährte, Rettungsanker oder '+unit:'Fährte oder '+unit;
         const disabled=hint.disabled;
         hint.onclick=()=>{if(disabled||hint.disabled||s.feedback)return;openMenu();};
       }
