@@ -5,6 +5,19 @@
   if(!frame)return;
 
   const RELEASE='20260822-runtime-single-owner-4';
+
+  const introMeta={
+    1:{ability:'Deckschrubber-Trick',description:'Kai mischt die Wort-Kacheln deiner Satzübersetzung zusätzlich durch. Die Lösung bleibt vollständig möglich.'},
+    2:{ability:'Verdecktes Wort',description:'Brax verdeckt zeitweise eine ganze Wort-Kachel. Der vollständige Satz bleibt trotzdem lösbar.'},
+    3:{ability:'Köderwort',description:'Blackfinn schmuggelt ein falsches Wort zwischen die echten Wort-Kacheln. Finde den Köder.'},
+    4:{ability:'Zeitdruck',description:'Roderick setzt dich beim Übersetzen des vollständigen Satzes unter fairen Zeitdruck.'},
+    5:{ability:'Versiegelter Platz',description:'Vargas versiegelt kurz einen Satzplatz, bevor du ihn wieder benutzen kannst.'},
+    6:{ability:'Enterhaken',description:'Ironhook zieht eine bereits gesetzte Wort-Kachel zurück in deinen Wort-Pool.'},
+    7:{ability:'Doppelschlag',description:'Thorne verlangt zwei korrekt gelöste Sätze in Folge für einen vollständigen Treffer.'},
+    8:{ability:'Falsche Fährte',description:'Corvin markiert absichtlich eine falsche Wort-Fährte. Verlass dich auf Satz und Wort-Kacheln.'},
+    9:{ability:'Schattenfluch',description:'Azrak hüllt Wort-Kacheln oder Satzplätze kurz in Schatten, ohne die Aufgabe unlösbar zu machen.'},
+    10:{ability:'Königsprüfung',description:'Varkos kombiniert kontrolliert bekannte Satz-Mechaniken. Nie mehr als zwei gleichzeitig.'}
+  };
   const loaderIds=[
     'ws-boss-abilities-4-6-loader',
     'ws-boss-abilities-7-10-loader',
@@ -69,6 +82,25 @@
       @media(prefers-reduced-motion:reduce){.tiles .tile.ws-kai-shuffled,.tiles .tile.ws-brax-reveal,.tiles .tile.ws-decoy.ws-decoy-hit{animation-duration:.08s!important}}
     `;
     doc.head.appendChild(style);
+  }
+
+  function installIntroCopyObserver(doc){
+    if(doc.documentElement.dataset.wsSentenceIntroCopy==='1')return;
+    doc.documentElement.dataset.wsSentenceIntroCopy='1';
+    const patch=()=>{
+      const intro=doc.querySelector('.ws-boss-intro');
+      if(!intro)return;
+      const match=intro.querySelector('.ws-boss-intro-level')?.textContent?.match(/LEVEL\s+(\d+)/i);
+      const level=Math.max(1,Math.min(10,Number(match?.[1]||1)));
+      const meta=introMeta[level];
+      if(!meta)return;
+      const ability=intro.querySelector('.ws-boss-ability b');
+      const description=intro.querySelector('.ws-boss-ability p');
+      if(ability&&ability.textContent!==meta.ability)ability.textContent=meta.ability;
+      if(description&&description.textContent!==meta.description)description.textContent=meta.description;
+    };
+    patch();
+    new MutationObserver(patch).observe(doc.body,{childList:true,subtree:true});
   }
 
   function installAbilityRuntime(doc){
@@ -277,6 +309,7 @@
     readyObserver?.disconnect();readyObserver=null;
     const doc=getFrameDoc();
     ensureStyles(doc);
+    installIntroCopyObserver(doc);
     installAbilityRuntime(doc);
     ensureLoaderMarkers();
     document.documentElement.dataset.wsStableRuntime='loading';
@@ -320,7 +353,7 @@
 
   frame.addEventListener('load',()=>{
     const doc=getFrameDoc();
-    if(doc){ensureStyles(doc);installAbilityRuntime(doc);}
+    if(doc){ensureStyles(doc);installIntroCopyObserver(doc);installAbilityRuntime(doc);}
     if(!pipelineStarted){attempts=0;observedDoc=null;watchUntilReady();}
   });
 
