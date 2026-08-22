@@ -4,6 +4,9 @@
   if(!frame)return;
 
   let dismissedIntroUntil=0;
+  let integrityBusy=false;
+  let lastIntegrityRepair=0;
+  const integrityVersion='20260822-1337-1';
 
   function ensureStyles(doc){
     if(doc.getElementById('ws-boss-ux-final-regression-style'))return;
@@ -53,6 +56,85 @@
     doc.querySelectorAll('.ws-boss-intro').forEach(overlay=>overlay.remove());
   }
 
+  function bossActive(win,doc){
+    try{
+      if(typeof win.__WS_BOSS_ENCOUNTER_ACTIVE__==='function')return Boolean(win.__WS_BOSS_ENCOUNTER_ACTIVE__());
+    }catch{}
+    return Boolean(doc.querySelector('.bossSide'));
+  }
+
+  function loadFreshPatch(id,src){
+    return new Promise(resolve=>{
+      document.getElementById(id)?.remove();
+      const script=document.createElement('script');
+      script.id=id;
+      script.src=src+(src.includes('?')?'&':'?')+'v='+integrityVersion+'&t='+Date.now();
+      script.addEventListener('load',()=>resolve(true),{once:true});
+      script.addEventListener('error',()=>resolve(false),{once:true});
+      document.head.appendChild(script);
+    });
+  }
+
+  function sentenceApiReady(win){
+    return Boolean(win.__WS_VARIABLE_BOSS_WORDS__&&typeof win.WS_GET_BOSS_UNITS==='function'&&typeof win.WS_IS_BOSS_SENTENCE_MODE==='function');
+  }
+
+  function sentenceLooksHealthy(win,doc){
+    if(!bossActive(win,doc))return true;
+    if(!sentenceApiReady(win))return false;
+    let sentenceMode=false;
+    try{sentenceMode=Boolean(win.WS_IS_BOSS_SENTENCE_MODE());}catch{}
+    const prompt=(doc.querySelector('.prompt h1')?.textContent||'').trim();
+    const legacy=/^PIRATE$/i.test(prompt)||/^PIRAT$/i.test(prompt);
+    return sentenceMode&&!legacy;
+  }
+
+  function rarityRuntimeReady(win,doc){
+    return Boolean(win.__WS_WORD_RARITIES__&&doc.getElementById('ws-word-rarities-style'));
+  }
+
+  async function repairSentenceRuntime(win,doc){
+    if(sentenceApiReady(win)){
+      try{if(typeof win.setup==='function')win.setup();else if(typeof win.render==='function')win.render();}catch{}
+      await new Promise(r=>setTimeout(r,60));
+      if(sentenceLooksHealthy(win,doc))return;
+    }
+    try{
+      win.__WS_VARIABLE_BOSS_WORDS__=false;
+      doc.getElementById('ws-variable-boss-words-runtime')?.remove();
+    }catch{}
+    await loadFreshPatch('ws-variable-boss-words-integrity-loader','./assets/patches/variable-boss-words.js');
+  }
+
+  async function repairRarityRuntime(win,doc){
+    if(rarityRuntimeReady(win,doc)){
+      try{if(typeof win.render==='function')win.render();}catch{}
+      return;
+    }
+    try{
+      win.__WS_WORD_RARITIES__=false;
+      doc.getElementById('ws-word-rarities-runtime')?.remove();
+    }catch{}
+    await loadFreshPatch('ws-word-rarities-integrity-loader','./assets/patches/word-rarities.js');
+  }
+
+  async function ensureGameplayIntegrity(doc){
+    if(integrityBusy||Date.now()-lastIntegrityRepair<650)return;
+    const win=frame.contentWindow;
+    if(!win||!doc?.body)return;
+    const sentenceBroken=!sentenceLooksHealthy(win,doc);
+    const rarityBroken=!bossActive(win,doc)&&!rarityRuntimeReady(win,doc);
+    if(!sentenceBroken&&!rarityBroken)return;
+    integrityBusy=true;
+    lastIntegrityRepair=Date.now();
+    try{
+      if(sentenceBroken)await repairSentenceRuntime(win,doc);
+      if(rarityBroken)await repairRarityRuntime(win,doc);
+    }finally{
+      integrityBusy=false;
+    }
+  }
+
   function install(){
     try{
       const doc=frame.contentDocument;
@@ -60,18 +142,21 @@
       ensureStyles(doc);
       decorateBossInfo(doc);
       bindBossStart(doc);
-      if(doc.documentElement.dataset.wsBossUxFinalRegression==='2')return;
-      doc.documentElement.dataset.wsBossUxFinalRegression='2';
+      ensureGameplayIntegrity(doc);
+      if(doc.documentElement.dataset.wsBossUxFinalRegression==='3')return;
+      doc.documentElement.dataset.wsBossUxFinalRegression='3';
       doc.addEventListener('click',event=>{
-        if(!event.target?.closest?.('.ws-boss-info-chip'))return;
-        window.setTimeout(()=>{decorateBossInfo(doc);bindBossStart(doc);},0);
+        if(event.target?.closest?.('.ws-boss-info-chip'))window.setTimeout(()=>{decorateBossInfo(doc);bindBossStart(doc);},0);
+        window.setTimeout(()=>ensureGameplayIntegrity(doc),0);
       });
       const target=doc.getElementById('game')||doc.body;
       if(target)new MutationObserver(()=>{
         guardReopen(doc);
         decorateBossInfo(doc);
         bindBossStart(doc);
+        ensureGameplayIntegrity(doc);
       }).observe(target,{childList:true,subtree:true});
+      window.setInterval(()=>ensureGameplayIntegrity(doc),900);
     }catch(err){console.warn('Word Scramble final boss UX regression patch skipped',err)}
   }
 
