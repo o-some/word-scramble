@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import os
+import subprocess
+import tempfile
 import time
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
@@ -17,6 +19,9 @@ def state(driver):
         bossHp: Number(s.bossHp||0), bossMiss: Number(s.bossMiss||0),
         level: Number(sessionStorage.getItem('wordScrambleBossLevel')||1),
         stage: String(window.WS_GET_CEFR_STAGE?.()||'A1'),
+        campaign: !!window.WS_BOSS_CAMPAIGN,
+        campaignMarker: String(window.__WS_BOSS_PROGRESSION_CORE__||''),
+        campaignScript: !!document.getElementById('ws-boss-progression-core-runtime'),
         selected: s.sel.map(x=>String(x.l||'')), tiles: s.tiles.map(x=>String(x||'')),
         answer: String(typeof WS_GET_BOSS_ANSWER==='function' && s.boss ? WS_GET_BOSS_ANSWER() : currentAnswer()),
         units: typeof WS_GET_BOSS_UNITS==='function' ? WS_GET_BOSS_UNITS().map(String) : [],
@@ -33,6 +38,23 @@ def wait(driver, predicate, timeout=8, message="condition"):
         try: diag = state(driver)
         except Exception: diag = {}
         raise AssertionError(f"timeout waiting for {message}; diagnostics={diag}") from exc
+
+
+def diagnose_campaign_runtime(driver):
+    text = driver.execute_script("return document.getElementById('ws-boss-progression-core-runtime')?.textContent || ''")
+    print('CAMPAIGN_RUNTIME_DIAG', state(driver), flush=True)
+    if not text:
+        print('Campaign runtime element missing entirely', flush=True)
+        return
+    path = '/tmp/ws-campaign-injected-runtime.js'
+    with open(path, 'w', encoding='utf-8') as fh:
+        fh.write(text)
+    result = subprocess.run(['node', '--check', path], text=True, capture_output=True)
+    print('CAMPAIGN_RUNTIME_NODE_CHECK_RC', result.returncode, flush=True)
+    if result.stdout:
+        print(result.stdout, flush=True)
+    if result.stderr:
+        print(result.stderr, flush=True)
 
 
 def solve_normal(driver):
@@ -72,12 +94,9 @@ def fill_current_boss_sentence(driver):
 
 def solve_boss_sentence(driver):
     fill_current_boss_sentence(driver)
-    # Give delayed abilities (Ironhook / Varkos hook) the chance to act. If they pull
-    # a word back, the bot must solve the changed board just like a real player would.
     time.sleep(0.58)
     st=state(driver)
-    if len(st["selected"])<len(st["units"]):
-        fill_current_boss_sentence(driver)
+    if len(st["selected"])<len(st["units"]): fill_current_boss_sentence(driver)
     before=state(driver)
     assert len(before["selected"])==len(before["units"]),f"boss ability changed answer immediately before check: {before}"
     driver.execute_script("document.getElementById('check')?.click()")
@@ -126,7 +145,11 @@ def main():
         wait(driver,lambda d:d.execute_script("return !!window.__WS_BASE_RUNTIME__"),5,"base runtime")
         wait(driver,lambda d:d.execute_script("return !!window.__WS_VARIABLE_BOSS_WORDS__"),8,"sentence runtime")
         wait(driver,lambda d:d.execute_script("return !!window.__WS_WORD_RARITIES__"),8,"rarity runtime")
-        wait(driver,lambda d:d.execute_script("return !!window.WS_BOSS_CAMPAIGN"),5,"campaign runtime")
+        try:
+            wait(driver,lambda d:d.execute_script("return !!window.WS_BOSS_CAMPAIGN"),5,"campaign runtime")
+        except AssertionError:
+            diagnose_campaign_runtime(driver)
+            raise
         wait(driver,lambda d:d.execute_script("return !!document.querySelector('.ws-word-rarity-title')"),4,"initial rarity badge")
         assert state(driver)["stage"]=='A1',f"campaign must start at A1: {state(driver)}"
 
@@ -146,7 +169,6 @@ def main():
             assert after["bossHp"]==0,f"boss {level} final hit failed: before={before}; after={after}"
             wait(driver,lambda d:not state(d)["boss"],3.5,f"boss {level} exit")
 
-        # Boss 10 must complete A1, unlock A2, reset the campaign to boss 1 and show a premium continuation screen.
         wait(driver,lambda d:state(d)["stage"]=='A2',2.0,"advance CEFR stage to A2")
         wait(driver,lambda d:state(d)["level"]==1,2.0,"reset boss campaign to level 1 at A2")
         wait(driver,lambda d:d.execute_script("return !!document.querySelector('.ws-cefr-complete')"),2.0,"CEFR completion overlay")
