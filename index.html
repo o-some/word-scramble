@@ -11,10 +11,37 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#032f50}ifr
 </style>
 </head>
 <body>
-<iframe id="game" title="Word Scramble" allow="fullscreen; autoplay" src="./runtime/base.html?v=20260822-boss-campaign-v8" referrerpolicy="strict-origin-when-cross-origin"></iframe>
-<script src="./assets/patches/boss-roadmap-v1.js?v=20260822-boss-campaign-v8"></script>
-<script src="./assets/patches/boss-progression-core.js?v=20260822-boss-campaign-v8"></script>
-<script src="./assets/patches/boss-intro-lifecycle-bridge.js?v=20260822-boss-campaign-v8"></script>
-<script src="./assets/patches/boss-abilities-1-3.js?v=20260822-boss-campaign-v8"></script>
+<iframe id="game" title="Word Scramble" allow="fullscreen; autoplay" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+<script>
+(async()=>{
+  'use strict';
+  const RELEASE='20260822-runtime-v9';
+  window.__WS_RUNTIME_RELEASE__=RELEASE;
+  const frame=document.getElementById('game');
+  const load=(id,src)=>new Promise((resolve,reject)=>{
+    if(document.getElementById(id))return resolve();
+    const script=document.createElement('script');
+    script.id=id;
+    script.src=src+'?v='+encodeURIComponent(RELEASE);
+    script.dataset.wsRelease=RELEASE;
+    script.onload=()=>resolve();
+    script.onerror=()=>reject(new Error('Runtime-Modul konnte nicht geladen werden: '+src));
+    document.head.appendChild(script);
+  });
+  frame.src='./runtime/base.html?v='+encodeURIComponent(RELEASE);
+  for(const [id,src] of [
+    ['ws-roadmap-entry','./assets/patches/boss-roadmap-v1.js'],
+    ['ws-progression-entry','./assets/patches/boss-progression-core.js'],
+    ['ws-intro-lifecycle-entry','./assets/patches/boss-intro-lifecycle-bridge.js'],
+    ['ws-runtime-composition-entry','./assets/runtime-composition.js']
+  ]) await load(id,src);
+})().catch(err=>{
+  console.error('Word Scramble boot failed',err);
+  const box=document.createElement('div');
+  box.style.cssText='position:fixed;inset:0;z-index:999;display:grid;place-items:center;padding:24px;background:#032f50;color:#fff0bd;font:700 16px/1.4 system-ui;text-align:center';
+  box.textContent='Word Scramble konnte nicht vollständig gestartet werden. Bitte neu laden.';
+  document.body.appendChild(box);
+});
+</script>
 </body>
 </html>
