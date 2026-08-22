@@ -7,6 +7,7 @@
   let integrityBusy=false;
   let lastIntegrityRepair=0;
   const integrityVersion='20260822-1337-1';
+  const abilityLabels={1:'Deckschrubber-Trick',2:'Verdecktes Wort',3:'Köderwort',4:'Zeitdruck',5:'Versiegelter Platz',6:'Enterhaken',7:'Doppelschlag',8:'Falsche Fährte',9:'Schattenfluch',10:'Königsprüfung'};
 
   function ensureStyles(doc){
     if(doc.getElementById('ws-boss-ux-final-regression-style'))return;
@@ -16,6 +17,7 @@
       body:has(.ws-trail-candidate) .tile.ws-corvin-route:not(.ws-trail-candidate){outline-color:transparent!important;box-shadow:inset 0 2px rgba(255,255,255,.45),0 5px 0 #78460e!important}
       body:has(.ws-trail-candidate) .tile.ws-corvin-route:not(.ws-trail-candidate)::after{display:none!important}
       .ws-boss-intro-start{position:relative!important;z-index:5!important;pointer-events:auto!important;touch-action:manipulation!important;-webkit-tap-highlight-color:transparent!important}
+      .ws-boss-ability-badge,.ws-boss-ability-badge-4-6,.ws-boss-ability-badge-7-10{contain:layout paint;will-change:auto}
     `;
     doc.head.appendChild(style);
   }
@@ -61,6 +63,30 @@
       if(typeof win.__WS_BOSS_ENCOUNTER_ACTIVE__==='function')return Boolean(win.__WS_BOSS_ENCOUNTER_ACTIVE__());
     }catch{}
     return Boolean(doc.querySelector('.bossSide'));
+  }
+
+  function currentBossLevel(win,doc){
+    const match=doc.querySelector('.bossPlate')?.textContent?.match(/LEVEL\s+(\d+)/i);
+    if(match)return Math.max(1,Math.min(10,Number(match[1])||1));
+    try{return Math.max(1,Math.min(10,Number(win.sessionStorage.getItem('wordScrambleBossLevel')||1)));}catch{return 1;}
+  }
+
+  function ensureStableAbilityBadge(doc){
+    const win=frame.contentWindow;
+    if(!win||!bossActive(win,doc))return;
+    const card=doc.querySelector('.card');
+    if(!card)return;
+    const level=currentBossLevel(win,doc);
+    let badge=card.querySelector('.ws-boss-ability-badge,.ws-boss-ability-badge-4-6,.ws-boss-ability-badge-7-10');
+    if(!badge){
+      badge=doc.createElement('div');
+      badge.className=level<=3?'ws-boss-ability-badge':level<=6?'ws-boss-ability-badge-4-6':'ws-boss-ability-badge-7-10';
+      const label=card.querySelector('.label');
+      if(label)label.insertAdjacentElement('beforebegin',badge);else card.prepend(badge);
+    }
+    const text=abilityLabels[level]||'Bossfähigkeit';
+    if(badge.textContent!==text)badge.textContent=text;
+    badge.dataset.wsStableAbility='1';
   }
 
   function loadFreshPatch(id,src){
@@ -140,23 +166,29 @@
       const doc=frame.contentDocument;
       if(!doc?.head||!doc.body)return;
       ensureStyles(doc);
+      ensureStableAbilityBadge(doc);
       decorateBossInfo(doc);
       bindBossStart(doc);
       ensureGameplayIntegrity(doc);
-      if(doc.documentElement.dataset.wsBossUxFinalRegression==='3')return;
-      doc.documentElement.dataset.wsBossUxFinalRegression='3';
+      if(doc.documentElement.dataset.wsBossUxFinalRegression==='4')return;
+      doc.documentElement.dataset.wsBossUxFinalRegression='4';
       doc.addEventListener('click',event=>{
         if(event.target?.closest?.('.ws-boss-info-chip'))window.setTimeout(()=>{decorateBossInfo(doc);bindBossStart(doc);},0);
+        ensureStableAbilityBadge(doc);
         window.setTimeout(()=>ensureGameplayIntegrity(doc),0);
       });
       const target=doc.getElementById('game')||doc.body;
       if(target)new MutationObserver(()=>{
         guardReopen(doc);
+        ensureStableAbilityBadge(doc);
         decorateBossInfo(doc);
         bindBossStart(doc);
         ensureGameplayIntegrity(doc);
       }).observe(target,{childList:true,subtree:true});
-      window.setInterval(()=>ensureGameplayIntegrity(doc),900);
+      window.setInterval(()=>{
+        ensureStableAbilityBadge(doc);
+        ensureGameplayIntegrity(doc);
+      },900);
     }catch(err){console.warn('Word Scramble final boss UX regression patch skipped',err)}
   }
 
