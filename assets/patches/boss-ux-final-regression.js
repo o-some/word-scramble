@@ -6,7 +6,7 @@
   let dismissedIntroUntil=0;
   let integrityBusy=false;
   let lastIntegrityRepair=0;
-  const integrityVersion='20260822-1337-1';
+  const integrityVersion='20260822-1411-1';
   const abilityLabels={1:'Deckschrubber-Trick',2:'Verdecktes Wort',3:'Köderwort',4:'Zeitdruck',5:'Versiegelter Platz',6:'Enterhaken',7:'Doppelschlag',8:'Falsche Fährte',9:'Schattenfluch',10:'Königsprüfung'};
 
   function ensureStyles(doc){
@@ -22,6 +22,17 @@
     doc.head.appendChild(style);
   }
 
+  function installStateBridge(doc){
+    if(doc.getElementById('ws-boss-state-bridge'))return;
+    const bridge=doc.createElement('script');
+    bridge.id='ws-boss-state-bridge';
+    bridge.textContent=`(()=>{
+      window.__WS_BOSS_ENCOUNTER_ACTIVE__=()=>{try{return Boolean(s&&s.boss)}catch{return false}};
+      window.__WS_BOSS_FEEDBACK_ACTIVE__=()=>{try{return Boolean(s&&s.feedback)}catch{return false}};
+    })();`;
+    doc.documentElement.appendChild(bridge);
+  }
+
   function decorateBossInfo(doc){
     const intro=doc.querySelector('.ws-boss-intro');
     if(!intro)return;
@@ -34,10 +45,8 @@
 
   function dismissBossIntro(doc){
     dismissedIntroUntil=Date.now()+1400;
-    const overlay=doc.querySelector('.ws-boss-intro');
-    if(overlay)overlay.remove();
-    const chip=doc.querySelector('.ws-boss-info-chip');
-    if(chip)chip.classList.add('show');
+    doc.querySelector('.ws-boss-intro')?.remove();
+    doc.querySelector('.ws-boss-info-chip')?.classList.add('show');
   }
 
   function bindBossStart(doc){
@@ -62,7 +71,16 @@
     try{
       if(typeof win.__WS_BOSS_ENCOUNTER_ACTIVE__==='function')return Boolean(win.__WS_BOSS_ENCOUNTER_ACTIVE__());
     }catch{}
-    return Boolean(doc.querySelector('.bossSide'));
+    const img=doc.querySelector('.bossImg');
+    if(!img)return false;
+    try{
+      const style=win.getComputedStyle(img);
+      return style.display!=='none'&&style.visibility!=='hidden'&&Number(style.opacity||1)>0&&img.getClientRects().length>0;
+    }catch{return false;}
+  }
+
+  function bossFeedbackActive(win){
+    try{return typeof win.__WS_BOSS_FEEDBACK_ACTIVE__==='function'&&Boolean(win.__WS_BOSS_FEEDBACK_ACTIVE__());}catch{return false;}
   }
 
   function currentBossLevel(win,doc){
@@ -120,6 +138,7 @@
   }
 
   async function repairSentenceRuntime(win,doc){
+    if(!bossActive(win,doc)||bossFeedbackActive(win))return;
     if(sentenceApiReady(win)){
       try{if(typeof win.setup==='function')win.setup();else if(typeof win.render==='function')win.render();}catch{}
       await new Promise(r=>setTimeout(r,60));
@@ -133,6 +152,7 @@
   }
 
   async function repairRarityRuntime(win,doc){
+    if(bossActive(win,doc))return;
     if(rarityRuntimeReady(win,doc)){
       try{if(typeof win.render==='function')win.render();}catch{}
       return;
@@ -148,8 +168,9 @@
     if(integrityBusy||Date.now()-lastIntegrityRepair<650)return;
     const win=frame.contentWindow;
     if(!win||!doc?.body)return;
-    const sentenceBroken=!sentenceLooksHealthy(win,doc);
-    const rarityBroken=!bossActive(win,doc)&&!rarityRuntimeReady(win,doc);
+    const active=bossActive(win,doc);
+    const sentenceBroken=active&&!sentenceLooksHealthy(win,doc)&&!bossFeedbackActive(win);
+    const rarityBroken=!active&&!rarityRuntimeReady(win,doc);
     if(!sentenceBroken&&!rarityBroken)return;
     integrityBusy=true;
     lastIntegrityRepair=Date.now();
@@ -166,12 +187,13 @@
       const doc=frame.contentDocument;
       if(!doc?.head||!doc.body)return;
       ensureStyles(doc);
+      installStateBridge(doc);
       ensureStableAbilityBadge(doc);
       decorateBossInfo(doc);
       bindBossStart(doc);
       ensureGameplayIntegrity(doc);
-      if(doc.documentElement.dataset.wsBossUxFinalRegression==='4')return;
-      doc.documentElement.dataset.wsBossUxFinalRegression='4';
+      if(doc.documentElement.dataset.wsBossUxFinalRegression==='5')return;
+      doc.documentElement.dataset.wsBossUxFinalRegression='5';
       doc.addEventListener('click',event=>{
         if(event.target?.closest?.('.ws-boss-info-chip'))window.setTimeout(()=>{decorateBossInfo(doc);bindBossStart(doc);},0);
         ensureStableAbilityBadge(doc);
