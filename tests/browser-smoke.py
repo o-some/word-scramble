@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 import subprocess
-import tempfile
 import time
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
@@ -47,14 +46,11 @@ def diagnose_campaign_runtime(driver):
         print('Campaign runtime element missing entirely', flush=True)
         return
     path = '/tmp/ws-campaign-injected-runtime.js'
-    with open(path, 'w', encoding='utf-8') as fh:
-        fh.write(text)
+    with open(path, 'w', encoding='utf-8') as fh: fh.write(text)
     result = subprocess.run(['node', '--check', path], text=True, capture_output=True)
     print('CAMPAIGN_RUNTIME_NODE_CHECK_RC', result.returncode, flush=True)
-    if result.stdout:
-        print(result.stdout, flush=True)
-    if result.stderr:
-        print(result.stderr, flush=True)
+    if result.stdout: print(result.stdout, flush=True)
+    if result.stderr: print(result.stderr, flush=True)
 
 
 def solve_normal(driver):
@@ -133,6 +129,29 @@ def assert_ability_visible(driver,level):
         driver.execute_script("s.sel=[];render()")
 
 
+def complete_stage_via_campaign_owner(driver, expected_current, expected_next=None, mastered=False):
+    assert state(driver)["stage"] == expected_current, f"expected stage {expected_current}: {state(driver)}"
+    driver.execute_script("""
+      localStorage.setItem('wordScrambleBossLevelV2','10');sessionStorage.setItem('wordScrambleBossLevel','10');
+      s.boss=true;s.bossHp=1;s.bossMiss=0;s.normal=3;s.feedback=null;s.sel=[];
+      WS_BOSS_CAMPAIGN.hit();WS_BOSS_CAMPAIGN.finishTurn();setup();
+    """)
+    wait(driver,lambda d:d.execute_script("return !!document.querySelector('.ws-cefr-complete')"),2.0,f"{expected_current} completion overlay")
+    text=driver.execute_script("return document.querySelector('.ws-cefr-complete')?.textContent||''")
+    if mastered:
+        assert 'Alle Sprachstufen gemeistert' in text and 'A1 NEU STARTEN' in text,f"wrong C2 completion copy: {text!r}"
+        assert state(driver)["stage"]=='C2',f"C2 must remain current until restart CTA: {state(driver)}"
+    else:
+        assert expected_next is not None
+        assert f'{expected_current} geschafft' in text and f'{expected_next} STARTEN' in text,f"wrong stage completion copy: {text!r}"
+        wait(driver,lambda d:state(d)["stage"]==expected_next,1.5,f"advance {expected_current} to {expected_next}")
+        wait(driver,lambda d:state(d)["level"]==1,1.5,f"reset boss level at {expected_next}")
+    driver.execute_script("document.querySelector('.ws-cefr-complete-start')?.click()")
+    wait(driver,lambda d:d.execute_script("return !document.querySelector('.ws-cefr-complete')"),1.5,"close CEFR completion overlay")
+    if mastered:
+        wait(driver,lambda d:state(d)["stage"]=='A1' and state(d)["level"]==1,2.0,"restart campaign at A1 after C2")
+
+
 def main():
     options=webdriver.ChromeOptions()
     for arg in ["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--disable-background-networking","--disable-component-update","--window-size=390,844","--blink-settings=imagesEnabled=false"]: options.add_argument(arg)
@@ -145,11 +164,9 @@ def main():
         wait(driver,lambda d:d.execute_script("return !!window.__WS_BASE_RUNTIME__"),5,"base runtime")
         wait(driver,lambda d:d.execute_script("return !!window.__WS_VARIABLE_BOSS_WORDS__"),8,"sentence runtime")
         wait(driver,lambda d:d.execute_script("return !!window.__WS_WORD_RARITIES__"),8,"rarity runtime")
-        try:
-            wait(driver,lambda d:d.execute_script("return !!window.WS_BOSS_CAMPAIGN"),5,"campaign runtime")
+        try: wait(driver,lambda d:d.execute_script("return !!window.WS_BOSS_CAMPAIGN"),5,"campaign runtime")
         except AssertionError:
-            diagnose_campaign_runtime(driver)
-            raise
+            diagnose_campaign_runtime(driver);raise
         wait(driver,lambda d:d.execute_script("return !!document.querySelector('.ws-word-rarity-title')"),4,"initial rarity badge")
         assert state(driver)["stage"]=='A1',f"campaign must start at A1: {state(driver)}"
 
@@ -171,14 +188,23 @@ def main():
 
         wait(driver,lambda d:state(d)["stage"]=='A2',2.0,"advance CEFR stage to A2")
         wait(driver,lambda d:state(d)["level"]==1,2.0,"reset boss campaign to level 1 at A2")
-        wait(driver,lambda d:d.execute_script("return !!document.querySelector('.ws-cefr-complete')"),2.0,"CEFR completion overlay")
+        wait(driver,lambda d:d.execute_script("return !!document.querySelector('.ws-cefr-complete')"),2.0,"A1 completion overlay")
         text=driver.execute_script("return document.querySelector('.ws-cefr-complete')?.textContent||''")
-        assert 'A1 geschafft' in text and 'A2 STARTEN' in text,f"wrong CEFR completion copy: {text!r}"
+        assert 'A1 geschafft' in text and 'A2 STARTEN' in text,f"wrong A1 completion copy: {text!r}"
         driver.execute_script("document.querySelector('.ws-cefr-complete-start')?.click()")
-        wait(driver,lambda d:d.execute_script("return !document.querySelector('.ws-cefr-complete')"),1.5,"close CEFR completion overlay")
+        wait(driver,lambda d:d.execute_script("return !document.querySelector('.ws-cefr-complete')"),1.5,"close A1 completion overlay")
         wait(driver,lambda d:d.execute_script("return !!document.querySelector('.ws-word-rarity-title')"),2.5,"A2 normal round rarity")
 
-        print("Word Scramble full boss campaign: PASS",flush=True);print("Boss 1 HP transitions:",observed_hp,flush=True);print("Next CEFR stage:",state(driver)["stage"],flush=True)
+        # The full campaign chain is owned by the same lifecycle API. We already exercised all ten
+        # live boss abilities above; these fast completions verify every CEFR unlock/reset contract.
+        for current,next_stage in [('A2','B1'),('B1','B2'),('B2','C1'),('C1','C2')]:
+            complete_stage_via_campaign_owner(driver,current,next_stage)
+        complete_stage_via_campaign_owner(driver,'C2',mastered=True)
+        wait(driver,lambda d:d.execute_script("return !!document.querySelector('.ws-word-rarity-title')"),2.5,"A1 rarity after full C2 restart")
+
+        print("Word Scramble full boss + CEFR campaign: PASS",flush=True)
+        print("Boss 1 HP transitions:",observed_hp,flush=True)
+        print("CEFR chain: A1 -> A2 -> B1 -> B2 -> C1 -> C2 -> A1",flush=True)
     finally: driver.quit()
 
 if __name__=='__main__': main()
