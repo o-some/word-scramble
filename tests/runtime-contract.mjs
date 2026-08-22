@@ -30,15 +30,14 @@ assert.match(bootstrap, /KAI MISCHT DIE ÜBRIGEN WÖRTER/, 'Kai must provide vis
 assert.doesNotMatch(bossUx, /installRoundTransitionContract/, 'boss UX must not own gameplay transition state');
 
 assert.match(sentences, /const BOSS_SENTENCES=/, 'boss sentence pool missing');
-for (let level = 1; level <= 10; level += 1) {
-  assert.match(sentences, new RegExp(`\\n\\s*${level}:\\[`), `boss sentence pool missing for level ${level}`);
-}
+for (let level = 1; level <= 10; level += 1) assert.match(sentences, new RegExp(`\\n\\s*${level}:\\[`), `boss sentence pool missing for level ${level}`);
 for (const stage of ['A1','A2','B1','B2','C1','C2']) {
   assert.ok(sentences.includes(stage), `sentence difficulty stage missing: ${stage}`);
   assert.ok(progression.includes(stage), `campaign stage missing: ${stage}`);
 }
-assert.match(sentences, /WS_BOSS_CAMPAIGN\?\.hit/, 'boss sentence success must use the authoritative campaign lifecycle');
-assert.match(sentences, /WS_BOSS_CAMPAIGN\?\.finishTurn/, 'boss sentence completion must use the authoritative campaign lifecycle');
+assert.match(sentences, /const campaign=window\.WS_BOSS_CAMPAIGN/, 'boss sentence runtime must bind the authoritative campaign lifecycle');
+assert.match(sentences, /campaign\?\.hit\(\)/, 'boss sentence success must use the authoritative campaign hit owner');
+assert.match(sentences, /campaign\?\.finishTurn\(\)/, 'boss sentence completion must use the authoritative campaign completion owner');
 assert.doesNotMatch(sentences, /currentLevel\(\)===7/, 'sentence runtime must not duplicate Thorne ability ownership');
 
 assert.doesNotMatch(abilities710, /const answer=['"]PIRATE['"]/, 'Thorne must never use the legacy PIRATE answer');
@@ -47,9 +46,7 @@ assert.match(abilities710, /WS_GET_BOSS_ANSWER/, 'bosses 7-10 must use the curre
 assert.match(abilities710, /Zwei richtige Sätze/, 'Thorne ability must be sentence based');
 assert.match(abilities46, /WS_BOSS_CAMPAIGN\?\.miss/, 'timed boss abilities must use campaign lifecycle misses');
 
-for (const label of ['STANDARD-WORT','BRONZE-WORT','SILBER-WORT','GOLD-WORT','EPISCHES WORT']) {
-  assert.ok(rarities.includes(label), `rarity label missing: ${label}`);
-}
+for (const label of ['STANDARD-WORT','BRONZE-WORT','SILBER-WORT','GOLD-WORT','EPISCHES WORT']) assert.ok(rarities.includes(label), `rarity label missing: ${label}`);
 assert.match(progression, /__WS_BOSS_PROGRESSION_CORE__/, 'boss progression core contract missing');
 assert.match(progression, /wordScrambleBossLevel/, 'boss progression storage contract missing');
 assert.match(progression, /WS_BOSS_CAMPAIGN=/, 'authoritative boss lifecycle API missing');
