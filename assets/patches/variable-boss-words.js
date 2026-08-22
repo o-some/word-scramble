@@ -149,12 +149,20 @@
         const lvl=currentLevel();
         const labels={1:'Deckschrubber-Trick',2:'Verdecktes Wort',3:'Köderwort',4:'Zeitdruck',5:'Versiegelter Platz',6:'Enterhaken',7:'Doppelschlag',8:'Falsche Fährte',9:'Schattenfluch',10:'Königsprüfung'};
         const badge=document.querySelector('.ws-boss-ability-badge,.ws-boss-ability-badge-4-6,.ws-boss-ability-badge-7-10');
-        if(badge&&labels[lvl])badge.textContent=labels[lvl];
+        if(badge&&labels[lvl]&&badge.textContent!==labels[lvl])badge.textContent=labels[lvl];
         if(lvl===7){
           const chain=document.querySelector('.ws-thorne-chain');
-          if(chain){const value=thorneChain===0?'0/2':'1/2';chain.innerHTML='⚔️ DOPPELSCHLAG · <b>'+value+'</b> · Zwei richtige Sätze für einen Treffer';}
+          if(chain){
+            const value=thorneChain===0?'0/2':'1/2';
+            const html='⚔️ DOPPELSCHLAG · <b>'+value+'</b> · Zwei richtige Sätze für einen Treffer';
+            if(chain.innerHTML!==html)chain.innerHTML=html;
+          }
         }
-        if(lvl===5){const note=document.querySelector('.ws-vargas-note');if(note)note.textContent='Vargas versiegelt den zweiten Satzplatz kurz.';}
+        if(lvl===5){
+          const note=document.querySelector('.ws-vargas-note');
+          const text='Vargas versiegelt den zweiten Satzplatz kurz.';
+          if(note&&note.textContent!==text)note.textContent=text;
+        }
       }
 
       function ensureBossTiles(){

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><title>Word Scramble runtime smoke</title></head>
+<body data-status="pending"><pre id="result">RUNNING</pre><iframe id="shell" src="../index.html?runtime-smoke=1" style="width:390px;height:844px"></iframe>
+<script>
+const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+const out=document.getElementById('result');
+let shellRef=null,gameFrameRef=null;
+function diagnostics(){
+  const shellDoc=shellRef?.contentDocument;
+  const gameDoc=gameFrameRef?.contentDocument;
+  let base=false,sentence=false,rarity=false,abilities13=false;
+  try{base=Boolean(gameFrameRef?.contentWindow.__WS_BASE_RUNTIME__);sentence=Boolean(gameFrameRef?.contentWindow.__WS_VARIABLE_BOSS_WORDS__);rarity=Boolean(gameFrameRef?.contentWindow.__WS_WORD_RARITIES__);abilities13=Boolean(gameFrameRef?.contentWindow.__WS_BOSS_ABILITIES_1_3_V4__)}catch{}
+  return JSON.stringify({stable:shellDoc?.documentElement?.dataset?.wsStableRuntime||'',release:shellDoc?.documentElement?.dataset?.wsRuntimeRelease||'',failure:shellDoc?.getElementById('ws-runtime-failure')?.dataset?.reason||'',frameSource:gameFrameRef?.dataset?.wsRuntimeSource||'',core:gameDoc?.documentElement?.dataset?.wsCoreRuntime||'',base,sentence,rarity,abilities13,scripts:[...(shellDoc?.scripts||[])].map(s=>s.getAttribute('src')||'inline')});
+}
+function fail(message){document.body.dataset.status='fail';out.textContent='FAIL: '+message+' | '+diagnostics();throw new Error(message)}
+async function waitFor(fn,timeout=9000,label='condition'){
+  const start=Date.now();
+  while(Date.now()-start<timeout){try{const value=fn();if(value)return value}catch{}await sleep(50)}
+  fail('timeout: '+label);
+}
+async function solveNormal(doc){
+  await waitFor(()=>doc.querySelector('.ws-word-rarity-title'),5000,'rarity badge');
+  for(let guard=0;guard<32;guard++){
+    const slots=[...doc.querySelectorAll('.slots .slot')];
+    if(slots.length&&slots.every(slot=>slot.classList.contains('filled')))break;
+    const hint=doc.getElementById('hint');if(!hint)fail('hint button missing');hint.click();await sleep(20);
+  }
+  const slots=[...doc.querySelectorAll('.slots .slot')];if(!slots.length||!slots.every(slot=>slot.classList.contains('filled')))fail('normal answer not filled by hint');
+  const check=doc.getElementById('check');if(!check)fail('check button missing');check.click();
+  await waitFor(()=>doc.querySelector('.feedback'),1500,'normal feedback');await waitFor(()=>!doc.querySelector('.feedback'),2500,'next normal round');
+}
+(async()=>{
+  try{
+    shellRef=document.getElementById('shell');
+    const shellDoc=await waitFor(()=>shellRef.contentDocument?.getElementById('game')?shellRef.contentDocument:null,6000,'outer shell');
+    gameFrameRef=shellDoc.getElementById('game');
+    const gameDoc=await waitFor(()=>gameFrameRef.contentDocument?.querySelector('.card')?gameFrameRef.contentDocument:null,7000,'local base');
+    await waitFor(()=>gameFrameRef.contentWindow.__WS_BASE_RUNTIME__,5000,'base runtime contract');
+    await waitFor(()=>gameFrameRef.contentWindow.__WS_VARIABLE_BOSS_WORDS__,7000,'sentence runtime contract');
+    await waitFor(()=>gameFrameRef.contentWindow.__WS_WORD_RARITIES__,7000,'rarity runtime contract');
+    await waitFor(()=>gameDoc.querySelector('.ws-word-rarity-title'),3000,'initial rarity');
+    await solveNormal(gameDoc);await solveNormal(gameDoc);await solveNormal(gameDoc);
+    await waitFor(()=>gameDoc.querySelector('.bossSide'),3500,'boss state after three rounds');
+    const intro=await waitFor(()=>gameDoc.querySelector('.ws-boss-intro'),3500,'boss intro');const start=intro.querySelector('.ws-boss-intro-start');if(!start)fail('boss start CTA missing');start.click();await waitFor(()=>!gameDoc.querySelector('.ws-boss-intro'),1200,'boss intro closes');
+    const sentenceCard=await waitFor(()=>gameDoc.querySelector('.card.ws-boss-sentence-mode'),2500,'boss sentence mode');const prompt=sentenceCard.querySelector('.prompt h1')?.textContent?.trim()||'';if(prompt.split(/\s+/).length<4)fail('boss prompt is not a full sentence: '+prompt);if(/PIRATE|BOSS-SCRAMBLE|BOSS LÄDT/i.test(prompt))fail('legacy boss prompt returned: '+prompt);
+    const badge=await waitFor(()=>sentenceCard.querySelector('.ws-boss-ability-badge,.ws-boss-ability-badge-4-6,.ws-boss-ability-badge-7-10'),1500,'boss ability badge');const before=badge.getBoundingClientRect();const tile=sentenceCard.querySelector('.tiles .tile:not(.used)');if(!tile)fail('boss sentence tile missing');tile.click();await sleep(80);const badgeAfter=sentenceCard.querySelector('.ws-boss-ability-badge,.ws-boss-ability-badge-4-6,.ws-boss-ability-badge-7-10');if(!badgeAfter)fail('boss ability badge disappeared after tile click');const after=badgeAfter.getBoundingClientRect();if(Math.abs(after.top-before.top)>2)fail('boss ability badge shifted vertically after tile click');
+    document.body.dataset.status='pass';out.textContent='PASS | '+diagnostics();
+  }catch(error){if(document.body.dataset.status!=='fail'){document.body.dataset.status='fail';out.textContent='FAIL: '+(error?.message||error)+' | '+diagnostics()}}
+})();
+</script></body></html>
