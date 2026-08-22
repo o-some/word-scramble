@@ -167,7 +167,7 @@
 
 (()=>{
   'use strict';
-  const version='20260822-stable-runtime-1';
+  const version='20260822-coldstart-runtime-2';
   const loaderIds=[
     'ws-boss-abilities-4-6-loader',
     'ws-boss-abilities-7-10-loader',
@@ -181,14 +181,6 @@
     'ws-boss-ux-final-regression-loader',
     'ws-tula-final-polish-loader'
   ];
-
-  loaderIds.forEach(id=>{
-    if(document.getElementById(id))return;
-    const marker=document.createElement('meta');
-    marker.id=id;
-    marker.dataset.wsLoaderMarker='stable';
-    document.head.appendChild(marker);
-  });
 
   const pipeline=[
     ['ws-stable-boss-abilities-4-6','./assets/patches/boss-abilities-4-6.js'],
@@ -204,6 +196,25 @@
     ['ws-stable-boss-ux-final-regression','./assets/patches/boss-ux-final-regression.js']
   ];
 
+  let pipelineStarted=false;
+
+  function frameReady(){
+    try{
+      const doc=frame.contentDocument;
+      return Boolean(doc?.body&&doc.getElementById('game')&&doc.querySelector('.card'));
+    }catch{return false;}
+  }
+
+  function ensureLoaderMarkers(){
+    loaderIds.forEach(id=>{
+      if(document.getElementById(id))return;
+      const marker=document.createElement('meta');
+      marker.id=id;
+      marker.dataset.wsLoaderMarker='stable';
+      document.head.appendChild(marker);
+    });
+  }
+
   function load(id,src){
     return new Promise((resolve,reject)=>{
       if(document.getElementById(id)){resolve();return;}
@@ -217,13 +228,21 @@
     });
   }
 
-  (async()=>{
+  async function bootstrapRuntime(){
+    if(pipelineStarted||!frameReady())return;
+    pipelineStarted=true;
+    ensureLoaderMarkers();
+    document.documentElement.dataset.wsStableRuntime='loading';
     try{
       for(const [id,src] of pipeline)await load(id,src);
       document.documentElement.dataset.wsStableRuntime='ready';
+      try{frame.contentDocument.documentElement.dataset.wsOuterRuntimeRelease=version;}catch{}
     }catch(err){
       document.documentElement.dataset.wsStableRuntime='failed';
       console.error('Word Scramble stable runtime pipeline failed',err);
     }
-  })();
+  }
+
+  frame.addEventListener('load',()=>window.setTimeout(bootstrapRuntime,0));
+  if(frameReady())bootstrapRuntime();
 })();
