@@ -4,9 +4,6 @@
   if(!frame)return;
 
   let dismissedIntroUntil=0;
-  let integrityBusy=false;
-  let lastIntegrityRepair=0;
-  const integrityVersion='20260822-1411-1';
   const abilityLabels={1:'Deckschrubber-Trick',2:'Verdecktes Wort',3:'Köderwort',4:'Zeitdruck',5:'Versiegelter Platz',6:'Enterhaken',7:'Doppelschlag',8:'Falsche Fährte',9:'Schattenfluch',10:'Königsprüfung'};
 
   function ensureStyles(doc){
@@ -29,8 +26,27 @@
     bridge.textContent=`(()=>{
       window.__WS_BOSS_ENCOUNTER_ACTIVE__=()=>{try{return Boolean(s&&s.boss)}catch{return false}};
       window.__WS_BOSS_FEEDBACK_ACTIVE__=()=>{try{return Boolean(s&&s.feedback)}catch{return false}};
+      window.__WS_RUNTIME_CORE_READY__=()=>Boolean(window.__WS_BOSS_ABILITIES_4_6__&&window.__WS_BOSS_ABILITIES_7_10__&&window.__WS_VARIABLE_BOSS_WORDS__&&window.__WS_WORD_RARITIES__);
     })();`;
     doc.documentElement.appendChild(bridge);
+  }
+
+  function bossActive(win,doc){
+    try{
+      if(typeof win.__WS_BOSS_ENCOUNTER_ACTIVE__==='function')return Boolean(win.__WS_BOSS_ENCOUNTER_ACTIVE__());
+    }catch{}
+    const img=doc.querySelector('.bossImg');
+    if(!img)return false;
+    try{
+      const style=win.getComputedStyle(img);
+      return style.display!=='none'&&style.visibility!=='hidden'&&Number(style.opacity||1)>0&&img.getClientRects().length>0;
+    }catch{return false;}
+  }
+
+  function currentBossLevel(win,doc){
+    const match=doc.querySelector('.bossPlate')?.textContent?.match(/LEVEL\s+(\d+)/i);
+    if(match)return Math.max(1,Math.min(10,Number(match[1])||1));
+    try{return Math.max(1,Math.min(10,Number(win.sessionStorage.getItem('wordScrambleBossLevel')||1)));}catch{return 1;}
   }
 
   function decorateBossInfo(doc){
@@ -67,28 +83,6 @@
     doc.querySelectorAll('.ws-boss-intro').forEach(overlay=>overlay.remove());
   }
 
-  function bossActive(win,doc){
-    try{
-      if(typeof win.__WS_BOSS_ENCOUNTER_ACTIVE__==='function')return Boolean(win.__WS_BOSS_ENCOUNTER_ACTIVE__());
-    }catch{}
-    const img=doc.querySelector('.bossImg');
-    if(!img)return false;
-    try{
-      const style=win.getComputedStyle(img);
-      return style.display!=='none'&&style.visibility!=='hidden'&&Number(style.opacity||1)>0&&img.getClientRects().length>0;
-    }catch{return false;}
-  }
-
-  function bossFeedbackActive(win){
-    try{return typeof win.__WS_BOSS_FEEDBACK_ACTIVE__==='function'&&Boolean(win.__WS_BOSS_FEEDBACK_ACTIVE__());}catch{return false;}
-  }
-
-  function currentBossLevel(win,doc){
-    const match=doc.querySelector('.bossPlate')?.textContent?.match(/LEVEL\s+(\d+)/i);
-    if(match)return Math.max(1,Math.min(10,Number(match[1])||1));
-    try{return Math.max(1,Math.min(10,Number(win.sessionStorage.getItem('wordScrambleBossLevel')||1)));}catch{return 1;}
-  }
-
   function ensureStableAbilityBadge(doc){
     const win=frame.contentWindow;
     if(!win||!bossActive(win,doc))return;
@@ -107,79 +101,12 @@
     badge.dataset.wsStableAbility='1';
   }
 
-  function loadFreshPatch(id,src){
-    return new Promise(resolve=>{
-      document.getElementById(id)?.remove();
-      const script=document.createElement('script');
-      script.id=id;
-      script.src=src+(src.includes('?')?'&':'?')+'v='+integrityVersion+'&t='+Date.now();
-      script.addEventListener('load',()=>resolve(true),{once:true});
-      script.addEventListener('error',()=>resolve(false),{once:true});
-      document.head.appendChild(script);
-    });
-  }
-
-  function sentenceApiReady(win){
-    return Boolean(win.__WS_VARIABLE_BOSS_WORDS__&&typeof win.WS_GET_BOSS_UNITS==='function'&&typeof win.WS_IS_BOSS_SENTENCE_MODE==='function');
-  }
-
-  function sentenceLooksHealthy(win,doc){
-    if(!bossActive(win,doc))return true;
-    if(!sentenceApiReady(win))return false;
-    let sentenceMode=false;
-    try{sentenceMode=Boolean(win.WS_IS_BOSS_SENTENCE_MODE());}catch{}
-    const prompt=(doc.querySelector('.prompt h1')?.textContent||'').trim();
-    const legacy=/^PIRATE$/i.test(prompt)||/^PIRAT$/i.test(prompt);
-    return sentenceMode&&!legacy;
-  }
-
-  function rarityRuntimeReady(win,doc){
-    return Boolean(win.__WS_WORD_RARITIES__&&doc.getElementById('ws-word-rarities-style'));
-  }
-
-  async function repairSentenceRuntime(win,doc){
-    if(!bossActive(win,doc)||bossFeedbackActive(win))return;
-    if(sentenceApiReady(win)){
-      try{if(typeof win.setup==='function')win.setup();else if(typeof win.render==='function')win.render();}catch{}
-      await new Promise(r=>setTimeout(r,60));
-      if(sentenceLooksHealthy(win,doc))return;
-    }
-    try{
-      win.__WS_VARIABLE_BOSS_WORDS__=false;
-      doc.getElementById('ws-variable-boss-words-runtime')?.remove();
-    }catch{}
-    await loadFreshPatch('ws-variable-boss-words-integrity-loader','./assets/patches/variable-boss-words.js');
-  }
-
-  async function repairRarityRuntime(win,doc){
-    if(bossActive(win,doc))return;
-    if(rarityRuntimeReady(win,doc)){
-      try{if(typeof win.render==='function')win.render();}catch{}
-      return;
-    }
-    try{
-      win.__WS_WORD_RARITIES__=false;
-      doc.getElementById('ws-word-rarities-runtime')?.remove();
-    }catch{}
-    await loadFreshPatch('ws-word-rarities-integrity-loader','./assets/patches/word-rarities.js');
-  }
-
-  async function ensureGameplayIntegrity(doc){
-    if(integrityBusy||Date.now()-lastIntegrityRepair<650)return;
+  function verifyCoreRuntime(doc){
     const win=frame.contentWindow;
-    if(!win||!doc?.body)return;
-    const active=bossActive(win,doc);
-    const sentenceBroken=active&&!sentenceLooksHealthy(win,doc)&&!bossFeedbackActive(win);
-    const rarityBroken=!active&&!rarityRuntimeReady(win,doc);
-    if(!sentenceBroken&&!rarityBroken)return;
-    integrityBusy=true;
-    lastIntegrityRepair=Date.now();
-    try{
-      if(sentenceBroken)await repairSentenceRuntime(win,doc);
-      if(rarityBroken)await repairRarityRuntime(win,doc);
-    }finally{
-      integrityBusy=false;
-    }
+    if(!win)return;
+    let ready=false;
+    try{ready=typeof win.__WS_RUNTIME_CORE_READY__==='function'&&Boolean(win.__WS_RUNTIME_CORE_READY__());}catch{}
+    doc.documentElement.dataset.wsCoreRuntime=ready?'ready':'pending';
   }
 
   function install(){
@@ -191,13 +118,12 @@
       ensureStableAbilityBadge(doc);
       decorateBossInfo(doc);
       bindBossStart(doc);
-      ensureGameplayIntegrity(doc);
-      if(doc.documentElement.dataset.wsBossUxFinalRegression==='5')return;
-      doc.documentElement.dataset.wsBossUxFinalRegression='5';
+      verifyCoreRuntime(doc);
+      if(doc.documentElement.dataset.wsBossUxFinalRegression==='6')return;
+      doc.documentElement.dataset.wsBossUxFinalRegression='6';
       doc.addEventListener('click',event=>{
         if(event.target?.closest?.('.ws-boss-info-chip'))window.setTimeout(()=>{decorateBossInfo(doc);bindBossStart(doc);},0);
         ensureStableAbilityBadge(doc);
-        window.setTimeout(()=>ensureGameplayIntegrity(doc),0);
       });
       const target=doc.getElementById('game')||doc.body;
       if(target)new MutationObserver(()=>{
@@ -205,12 +131,8 @@
         ensureStableAbilityBadge(doc);
         decorateBossInfo(doc);
         bindBossStart(doc);
-        ensureGameplayIntegrity(doc);
+        verifyCoreRuntime(doc);
       }).observe(target,{childList:true,subtree:true});
-      window.setInterval(()=>{
-        ensureStableAbilityBadge(doc);
-        ensureGameplayIntegrity(doc);
-      },900);
     }catch(err){console.warn('Word Scramble final boss UX regression patch skipped',err)}
   }
 
