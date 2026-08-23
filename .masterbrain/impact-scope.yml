@@ -1,0 +1,50 @@
+template_version: "1.0.0"
+task:
+  id: "game-pipeline-dry-run-2026-08-23"
+  summary: "Exercise the MasterBrain/BigBrain game pipeline without changing gameplay, design or runtime behavior."
+  repository: "o-some/word-scramble"
+  baseline_branch: "main"
+  baseline_sha: "23c3c71734d8cf950ed15e1a6b92e257f4d6258b"
+  working_branch: "chore/masterbrain-game-pipeline-dry-run-2026-08-23"
+
+allowed_paths:
+  - ".masterbrain/**"
+
+protected_paths:
+  - "index.html"
+  - "assets/**"
+  - "runtime/**"
+  - "tests/**"
+  - ".github/workflows/**"
+  - "docs/**"
+
+protected_systems:
+  - "gameplay"
+  - "boss mechanics"
+  - "progression"
+  - "save state"
+  - "runtime composition"
+  - "Tula/boss assets"
+  - "deployment workflows"
+
+rules:
+  refactor_outside_scope: false
+  direct_main_write: false
+  force_push: false
+  preserve_uncommitted_work: true
+  smallest_safe_diff: true
+  shared_component_change_requires_owner: true
+
+plan_deviation:
+  allowed: false
+  reason: ""
+  newly_required_paths: []
+  approval_required: true
+
+rollback:
+  required: true
+  method: "delete isolated dry-run branch; main remains unchanged"
+  reference: "23c3c71734d8cf950ed15e1a6b92e257f4d6258b"
+
+notes:
+  - "This branch is evidence-only and must not be merged as a product feature."
