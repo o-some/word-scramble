@@ -1,0 +1,26 @@
+template_version: "1.0.0"
+status: "PENDING_CI"
+candidate_branch: "masterbrain/game-pipeline-dry-run"
+baseline_sha: "23c3c71734d8cf950ed15e1a6b92e257f4d6258b"
+weights:
+  technical_stability: 20
+  mobile_ux: 20
+  gameplay: 20
+  brand_visual_quality: 15
+  learning_value: 15
+  performance: 5
+  accessibility_input: 5
+thresholds:
+  overall: 90
+  technical_stability: 95
+  mobile_ux: 90
+  gameplay: 85
+  brand_visual_quality: 90
+  learning_value: 85
+  performance: 85
+  accessibility_input: 80
+critical_blockers: []
+score:
+  overall: null
+notes:
+  - "Dry run does not modify gameplay; score is finalized only after revision-bound CI/browser evidence."
