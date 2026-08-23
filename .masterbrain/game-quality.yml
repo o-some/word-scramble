@@ -1,0 +1,49 @@
+template_version: "1.0.0"
+assessment:
+  status: "BLOCKED"
+  reason: "The dry run could verify repository structure, automated test coverage and release contracts, but no fresh runtime/browser execution or real-device test was available in this session."
+  tested_candidate: "23c3c71734d8cf950ed15e1a6b92e257f4d6258b"
+  score_status: "NOT_FINAL"
+
+categories:
+  technical_stability:
+    weight: 20
+    score: null
+    evidence: "runtime contract workflow and browser smoke suite exist; fresh run not executed here"
+  mobile_ux:
+    weight: 20
+    score: null
+    evidence: "browser smoke config includes 390x844 viewport; no fresh visual/device execution here"
+  gameplay:
+    weight: 20
+    score: null
+    evidence: "browser smoke covers normal/boss/campaign transitions; fresh execution not available"
+  brand_visual_quality:
+    weight: 15
+    score: null
+    evidence: "Tula/Boss assets and roadmap checks are covered by repository tests; no fresh screenshot review"
+  learning_value:
+    weight: 15
+    score: null
+    evidence: "README and test suite show DE->EN learning and sentence boss mode"
+  performance:
+    weight: 5
+    score: null
+    evidence: "no fresh runtime timing or device evidence"
+  accessibility_input:
+    weight: 5
+    score: null
+    evidence: "touch/pointer are requirements; fresh interaction was not executed"
+
+critical_blockers:
+  - "No fresh runtime playtest evidence bound to this dry-run assessment."
+  - "No fresh live GitHub Pages smoke test was executed in this session."
+  - "No real-device iPhone/Android evidence was executed in this session."
+
+release_gate:
+  threshold: 90
+  critical_blockers_override_score: true
+  decision: "DO_NOT_RELEASE_FROM_THIS_DRY_RUN"
+
+notes:
+  - "This BLOCKED result is expected and demonstrates that the new pipeline refuses to convert static test existence into a false PASS."
