@@ -19,7 +19,8 @@ def state(driver):
         level: Number(sessionStorage.getItem('wordScrambleBossLevel')||1),
         stage: String(window.WS_GET_CEFR_STAGE?.()||'A1'),
         campaign: !!window.WS_BOSS_CAMPAIGN,
-        selected: s.sel.map(x=>String(x.l||'')), tiles: s.tiles.map(x=>String(x||'')),
+        selected: s.sel.map(x=>String(x.l||'')), selectedIds: s.sel.map(x=>Number(x.id)),
+        tiles: s.tiles.map(x=>String(x||'')),
         answer: String(typeof WS_GET_BOSS_ANSWER==='function' && s.boss ? WS_GET_BOSS_ANSWER() : currentAnswer()),
         units: typeof WS_GET_BOSS_UNITS==='function' ? WS_GET_BOSS_UNITS().map(String) : []
       };
@@ -37,7 +38,7 @@ def wait(driver, predicate, timeout=8, message="condition"):
 
 def assert_atomic_release(driver):
     release = driver.execute_script("return String(window.parent.__WS_RUNTIME_RELEASE__||'')")
-    assert release == '20260822-runtime-v9', f"unexpected runtime release: {release!r}"
+    assert release == '20260823-runtime-v10', f"unexpected runtime release: {release!r}"
     wait(driver, lambda d: d.execute_script("return window.parent.document.documentElement.dataset.wsRuntimeComposition==='ready'"), 8, "atomic runtime composition")
     sources = driver.execute_script("""
       return [...window.parent.document.scripts]
@@ -54,6 +55,27 @@ def assert_atomic_release(driver):
         .map(s=>s.src);
     """)
     assert legacy_scripts == [], f"legacy self-loading chain became active: {legacy_scripts}"
+
+
+def click_next_correct_word(driver, preferred_id=None):
+    st = state(driver)
+    units = [u.upper() for u in st["units"]]
+    selected = [u.upper() for u in st["selected"]]
+    assert len(selected) < len(units), f"no next word available: {st}"
+    wanted = units[len(selected)]
+    clicked = driver.execute_script("""
+      const wanted=arguments[0],preferred=arguments[1];
+      const buttons=[...document.querySelectorAll('.tiles .tile[data-i]:not(.used)')];
+      let target=null;
+      if(preferred!==null && preferred!==undefined){
+        const p=buttons.find(btn=>Number(btn.dataset.i)===Number(preferred) && !btn.disabled && String(s.tiles[Number(btn.dataset.i)]||'').toUpperCase()===wanted);
+        if(p)target=p;
+      }
+      if(!target)target=buttons.find(btn=>!btn.disabled&&String(s.tiles[Number(btn.dataset.i)]||'').toUpperCase()===wanted);
+      if(!target)return false;target.click();return true;
+    """, wanted, preferred_id)
+    assert clicked, f"could not click next correct word {wanted}: {st}"
+    time.sleep(0.06)
 
 
 def solve_normal(driver):
@@ -76,23 +98,15 @@ def dismiss_intro(driver):
 
 def fill_current_boss_sentence(driver):
     for _ in range(180):
-        st=state(driver);units=[u.upper() for u in st["units"]];selected=[u.upper() for u in st["selected"]]
-        if units and len(selected)==len(units): return
-        assert units,f"boss sentence units missing: {st}"
-        next_unit=units[len(selected)]
-        clicked=driver.execute_script("""
-          const wanted=arguments[0];
-          const buttons=[...document.querySelectorAll('.tiles .tile[data-i]:not(.used)')];
-          const target=buttons.find(btn=>!btn.disabled&&String(s.tiles[Number(btn.dataset.i)]||'').toUpperCase()===wanted);
-          if(!target)return false;target.click();return true;
-        """,next_unit)
-        time.sleep(0.04 if clicked else 0.07)
+        st=state(driver)
+        if st["units"] and len(st["selected"])==len(st["units"]): return
+        click_next_correct_word(driver)
     raise AssertionError(f"could not fill boss sentence: {state(driver)}")
 
 
 def solve_boss_sentence(driver):
     fill_current_boss_sentence(driver)
-    time.sleep(0.58)
+    time.sleep(0.62)
     st=state(driver)
     if len(st["selected"])<len(st["units"]): fill_current_boss_sentence(driver)
     before=state(driver)
@@ -120,8 +134,29 @@ def force_boss(driver,level,hp=1):
     wait(driver,lambda d:d.execute_script("return !!document.querySelector('.card.ws-boss-sentence-mode')"),2,f"boss {level} sentence mode")
 
 
+def sealed_slot_index(driver):
+    return driver.execute_script("""
+      const slots=[...document.querySelectorAll('.slots .slot')],sealed=document.querySelector('.slot.ws-vargas-sealed');
+      return sealed?slots.indexOf(sealed):-1;
+    """)
+
+
+def assert_roadmap_current(driver, level):
+    selector=f'.ws-boss-card.current[data-level="{level}"]'
+    wait(driver,lambda d:d.execute_script("return !!document.querySelector(arguments[0])",selector),2.0,f"roadmap current boss {level}")
+    if 3 <= level <= 8:
+        wait(driver,lambda d:d.execute_script("""
+          const track=document.querySelector('.ws-boss-roadmap-track'),cur=document.querySelector('.ws-boss-card.current');
+          if(!track||!cur)return false;const a=track.getBoundingClientRect(),b=cur.getBoundingClientRect();
+          return Math.abs(((a.left+a.right)/2)-((b.left+b.right)/2)) < 24;
+        """),2.0,"roadmap current boss centered")
+    driver.execute_script("document.querySelector(arguments[0])?.click()",selector)
+    wait(driver,lambda d:d.execute_script("return !!document.querySelector('.ws-boss-intro')"),1.5,"roadmap boss info click")
+    dismiss_intro(driver)
+
+
 def assert_ability_visible(driver,level):
-    selectors={1:'.ws-boss-ability-badge',2:'.ws-brax-hidden',3:'.ws-decoy',4:'.ws-roderick-timer',5:'.ws-vargas-sealed',6:'.ws-boss-ability-badge-4-6',7:'.ws-thorne-chain',8:'.ws-corvin-route',9:'.ws-azrak-shadow',10:'.ws-varkos-mode'}
+    selectors={1:'.ws-boss-ability-badge',2:'.ws-brax-hidden',3:'.ws-decoy',4:'.ws-roderick-timer',5:'.ws-vargas-sealed',6:'.ws-boss-ability-badge-4-6',7:'.ws-thorne-chain',8:'.ws-corvin-decoy',9:'.ws-azrak-shadow',10:'.ws-varkos-mode'}
     selector=selectors[level]
     wait(driver,lambda d:d.execute_script("return !!document.querySelector(arguments[0])",selector),2.8,f"boss {level} ability {selector}")
     if level==1:
@@ -129,6 +164,48 @@ def assert_ability_visible(driver,level):
         driver.execute_script("""const wanted=arguments[0];const btn=[...document.querySelectorAll('.tiles .tile[data-i]:not(.used)')].find(x=>String(s.tiles[Number(x.dataset.i)]||'').toUpperCase()===wanted);btn?.click();""",first)
         wait(driver,lambda d:d.execute_script("return !!document.querySelector('.ws-kai-shuffled,.ws-kai-toast')"),1.0,"Kai visible shuffle")
         driver.execute_script("s.sel=[];render()")
+    elif level==4:
+        value=driver.execute_script("return parseFloat(document.querySelector('.ws-roderick-timer-head b')?.textContent||'0')")
+        assert value >= 14.0, f"Roderick timer did not start near 15s: {value}"
+    elif level==5:
+        total=len(state(driver)["units"])
+        assert sealed_slot_index(driver)==1, f"Vargas must start on word 2, got slot {sealed_slot_index(driver)}"
+        click_next_correct_word(driver)
+        expected=min(4,total-1)
+        wait(driver,lambda d:sealed_slot_index(d)==expected,1.0,"Vargas blockade moves from word 2 by three positions")
+        while len(state(driver)["selected"])<min(4,total-1): click_next_correct_word(driver)
+        if total>5:
+            expected=min(7,total-1)
+            wait(driver,lambda d:sealed_slot_index(d)==expected,1.0,"Vargas blockade moves again by three positions")
+        while len(state(driver)["selected"])<max(0,total-1): click_next_correct_word(driver)
+        wait(driver,lambda d:sealed_slot_index(d)==-1,1.0,"Vargas blockade disappears with one slot left")
+    elif level==6:
+        while len(state(driver)["selected"])<2: click_next_correct_word(driver)
+        wait(driver,lambda d:len(state(d)["selected"])==1,1.4,"Ironhook pulls word 2")
+        while len(state(driver)["selected"])<5: click_next_correct_word(driver)
+        wait(driver,lambda d:len(state(d)["selected"])==4,1.4,"Ironhook repeats on word 5")
+    elif level==8:
+        decoy=driver.execute_script("return String(document.querySelector('.ws-corvin-decoy')?.textContent||'').toUpperCase()")
+        units=[u.upper() for u in state(driver)["units"]]
+        assert decoy and decoy not in units, f"Corvin decoy must be a foreign word: {decoy} vs {units}"
+    elif level==9:
+        shadow=driver.execute_script("""
+          const el=document.querySelector('.tile.ws-azrak-shadow');
+          return el?{id:Number(el.dataset.i),word:String(s.tiles[Number(el.dataset.i)]||'').toUpperCase()}:null;
+        """)
+        assert shadow and shadow["id"]>=0, f"Azrak shadow target missing: {shadow}"
+        for _ in range(len(state(driver)["units"])+2):
+            st=state(driver)
+            if shadow["id"] in st["selectedIds"]: break
+            next_word=st["units"][len(st["selected"])].upper()
+            preferred=shadow["id"] if next_word==shadow["word"] else None
+            click_next_correct_word(driver,preferred)
+        wait(driver,lambda d:shadow["id"] in state(d)["selectedIds"],1.0,"Azrak shadow word placed correctly")
+        wait(driver,lambda d:d.execute_script("""
+          const old=arguments[0],remaining=[...document.querySelectorAll('.tiles .tile[data-i]:not(.used)')];
+          const next=document.querySelector('.tile.ws-azrak-shadow');
+          return remaining.length===0 || (!!next && Number(next.dataset.i)!==Number(old));
+        """,shadow["id"]),1.0,"Azrak shadow moves to another word")
 
 
 def complete_stage_via_campaign_owner(driver, expected_current, expected_next=None, mastered=False):
@@ -182,9 +259,16 @@ def main():
         wait(driver,lambda d:d.execute_script("return !!document.querySelector('.ws-word-rarity-title')"),3.0,"rarity after boss victory")
 
         for level in range(2,11):
-            force_boss(driver,level,1);assert_ability_visible(driver,level)
+            force_boss(driver,level,1)
+            if level==6: assert_roadmap_current(driver,level)
+            assert_ability_visible(driver,level)
             if level==7:
-                before,after=solve_boss_sentence(driver);assert after["bossHp"]==1;wait(driver,lambda d:not state(d)["feedback"],2.5,"Thorne second sentence");before,after=solve_boss_sentence(driver)
+                before,after=solve_boss_sentence(driver);assert after["bossHp"]==1
+                chain_text=driver.execute_script("return document.querySelector('.ws-thorne-chain')?.textContent||''")
+                assert '1 / 2 RICHTIG' in chain_text, f"Thorne 1/2 state not prominent: {chain_text!r}"
+                assert driver.execute_script("return document.querySelector('.ws-thorne-chain')?.classList.contains('is-charged')")
+                wait(driver,lambda d:not state(d)["feedback"],3.0,"Thorne second sentence")
+                before,after=solve_boss_sentence(driver)
             else: before,after=solve_boss_sentence(driver)
             assert after["bossHp"]==0,f"boss {level} final hit failed: before={before}; after={after}"
             wait(driver,lambda d:not state(d)["boss"],3.5,f"boss {level} exit")
@@ -198,10 +282,11 @@ def main():
         complete_stage_via_campaign_owner(driver,'C2',mastered=True)
         wait(driver,lambda d:d.execute_script("return !!document.querySelector('.ws-word-rarity-title')"),2.5,"A1 rarity after full C2 restart")
 
-        print("Word Scramble atomic runtime + full campaign: PASS",flush=True)
-        print("Release: 20260822-runtime-v9",flush=True)
+        print("Word Scramble boss mechanics + roadmap + full campaign: PASS",flush=True)
+        print("Release: 20260823-runtime-v10",flush=True)
         print("Boss 1 HP transitions:",observed_hp,flush=True)
-        print("Boss 1 return to Tula: PASS",flush=True)
+        print("Boss mechanics verified: Vargas roaming seal, Ironhook repeated pulls, Thorne 1/2, Corvin foreign decoy, Azrak moving shadow",flush=True)
+        print("Current boss roadmap centering/click: PASS",flush=True)
         print("CEFR chain: A1 -> A2 -> B1 -> B2 -> C1 -> C2 -> A1",flush=True)
     finally: driver.quit()
 
