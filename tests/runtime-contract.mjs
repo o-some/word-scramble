@@ -74,7 +74,8 @@ assert.match(abilities710, /20260823-v4/, 'bosses 7-10 runtime marker must be up
 
 assert.match(roadmap, /pointer-events:auto/, 'boss roadmap must be directly interactive');
 assert.match(roadmap, /bosses\.forEach/, 'boss roadmap must render the full campaign strip');
-assert.match(roadmap, /scrollIntoView\(\{block:'nearest',inline:'center'/, 'current boss must auto-center in the roadmap');
+assert.match(roadmap, /current\.offsetLeft\+\(current\.offsetWidth\/2\)-\(track\.clientWidth\/2\)/, 'current boss must use deterministic geometric centering');
+assert.match(roadmap, /track\.scrollLeft=Math\.max/, 'current boss centering must directly control the roadmap scroll container');
 assert.match(roadmap, /showBossIntro\(doc,idx\+1,false\)/, 'roadmap boss cards must open boss info directly');
 
 for (const label of ['STANDARD-WORT','BRONZE-WORT','SILBER-WORT','GOLD-WORT','EPISCHES WORT']) assert.ok(rarities.includes(label), `rarity label missing: ${label}`);
