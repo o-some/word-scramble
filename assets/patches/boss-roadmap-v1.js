@@ -216,7 +216,11 @@
   function centerCurrent(win,track){
     const current=track.querySelector('.ws-boss-card.current');
     if(!current)return;
-    win.requestAnimationFrame(()=>current.scrollIntoView({block:'nearest',inline:'center',behavior:'auto'}));
+    win.requestAnimationFrame(()=>{
+      const target=current.offsetLeft+(current.offsetWidth/2)-(track.clientWidth/2);
+      const max=Math.max(0,track.scrollWidth-track.clientWidth);
+      track.scrollLeft=Math.max(0,Math.min(max,target));
+    });
   }
 
   function render(){
