@@ -5,6 +5,7 @@ const read = path => fs.readFileSync(path, 'utf8');
 const index = read('index.html');
 const base = read('runtime/base.html');
 const composition = read('assets/runtime-composition.js');
+const roadmap = read('assets/patches/boss-roadmap-v1.js');
 const abilities13 = read('assets/patches/boss-abilities-1-3-runtime.js');
 const lifecycleBridge = read('assets/patches/boss-intro-lifecycle-bridge.js');
 const abilities46 = read('assets/patches/boss-abilities-4-6.js');
@@ -14,7 +15,7 @@ const sentences = read('assets/patches/variable-boss-words.js');
 const rarities = read('assets/patches/word-rarities.js');
 const progression = read('assets/patches/boss-progression-core.js');
 
-assert.match(index, /const RELEASE='20260822-runtime-v9'/, 'production entrypoint must own one explicit runtime release');
+assert.match(index, /const RELEASE='20260823-runtime-v10'/, 'production entrypoint must own the current explicit runtime release');
 assert.match(index, /window\.__WS_RUNTIME_RELEASE__=RELEASE/, 'runtime release must be globally shared');
 assert.match(index, /\.\/runtime\/base\.html\?v='\+encodeURIComponent\(RELEASE\)/, 'base runtime must inherit the release');
 assert.match(index, /assets\/runtime-composition\.js/, 'atomic runtime composition must be the production entrypoint');
@@ -55,10 +56,27 @@ assert.match(sentences, /campaign\.hit\(\)/, 'boss sentence success must invoke 
 assert.match(sentences, /campaign\.finishTurn\(\)/, 'boss sentence completion must invoke the authoritative campaign completion owner');
 assert.doesNotMatch(sentences, /currentLevel\(\)===7/, 'sentence runtime must not duplicate Thorne ability ownership');
 
+assert.match(abilities46, /roderickRemaining=15000/, 'Roderick must keep the 15 second balance window');
+assert.match(abilities46, /vargasSealIndex=1/, 'Vargas blockade must start on word 2');
+assert.match(abilities46, /vargasSealIndex\+3/, 'Vargas blockade must migrate by three positions');
+assert.match(abilities46, /ironhookNextAt=2/, 'Ironhook must begin by pulling word 2');
+assert.match(abilities46, /ironhookNextAt\+=3/, 'Ironhook must repeat on word 5, 8 and onward');
+assert.match(abilities46, /20260823-v4/, 'bosses 4-6 runtime marker must be upgraded');
+
 assert.doesNotMatch(abilities710, /const answer=['"]PIRATE['"]/, 'Thorne must never use the legacy PIRATE answer');
 assert.match(abilities710, /WS_GET_BOSS_ANSWER/, 'bosses 7-10 must use the current sentence answer');
-assert.match(abilities710, /Zwei richtige Sätze/, 'Thorne ability must be sentence based');
-assert.match(abilities46, /WS_BOSS_CAMPAIGN\?\.miss/, 'timed boss abilities must use campaign lifecycle misses');
+assert.match(abilities710, /1 \/ 2 RICHTIG/, 'Thorne first success must be strongly highlighted');
+assert.match(abilities710, /ws-corvin-decoy/, 'Corvin must inject a completely foreign decoy word');
+assert.match(abilities710, /VOLCANO/, 'Corvin decoy pool must contain words outside normal sentence units');
+assert.match(abilities710, /azrakShadowIndex/, 'Azrak must keep one moving shadow target');
+assert.match(abilities710, /Richtig eingesetzt wird es sichtbar/, 'Azrak must explain the moving reveal mechanic');
+assert.match(abilities710, /20260823-v4/, 'bosses 7-10 runtime marker must be upgraded');
+
+assert.match(roadmap, /pointer-events:auto/, 'boss roadmap must be directly interactive');
+assert.match(roadmap, /bosses\.forEach/, 'boss roadmap must render the full campaign strip');
+assert.match(roadmap, /scrollIntoView\(\{block:'nearest',inline:'center'/, 'current boss must auto-center in the roadmap');
+assert.match(roadmap, /showBossIntro\(doc,idx\+1,false\)/, 'roadmap boss cards must open boss info directly');
+
 for (const label of ['STANDARD-WORT','BRONZE-WORT','SILBER-WORT','GOLD-WORT','EPISCHES WORT']) assert.ok(rarities.includes(label), `rarity label missing: ${label}`);
 
 assert.match(progression, /__WS_BOSS_PROGRESSION_CORE__/, 'boss progression core contract missing');
