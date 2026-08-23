@@ -1,0 +1,74 @@
+template_version: "1.0.0"
+meta:
+  project: "Tula's Island"
+  repository: "o-some/word-scramble"
+  game_name: "Word Scramble"
+  created_at: "2026-08-23"
+  source_prompt: "Branch 7 – Game Pipeline Dry Run"
+  risk_level: "low"
+
+game:
+  genre: "language word puzzle with boss campaign"
+  audience: "language learners"
+  platforms: [web, mobile-web, desktop-web]
+  orientation: "responsive"
+  input_modes: [touch, pointer]
+  session_length: "short repeatable rounds"
+
+learning:
+  enabled: true
+  objective: "Build English translations from German prompts and solve boss sentence challenges."
+  source_language: "de"
+  target_language: "en"
+  difficulty: "easy / medium / hard plus boss progression"
+  feedback_model: "immediate correct/wrong feedback"
+  repetition_model: "normal rounds followed by boss encounters and CEFR progression"
+
+core_loop:
+  action: "select ordered word/letter units"
+  challenge: "reconstruct the translation or boss sentence"
+  feedback: "correct/wrong reaction, score, combo, life and boss feedback"
+  reward: "points, shells, progression"
+  progression: "normal rounds -> boss -> boss campaign / CEFR progression"
+
+states:
+  required: [loading, menu, playing, victory, defeat, restart]
+  optional: [paused, boss, boss-intro, cefr-complete]
+
+visual:
+  brand_world: "Tula's Island"
+  existing_assets_first: true
+  readability_priority: true
+  mobile_first: true
+
+failure:
+  normal: "wrong answers affect the configured game state"
+  boss: "boss misses / failure state"
+  recovery: "restart or continue flow"
+
+rewards:
+  xp: false
+  shells: true
+  combo: true
+  unlocks: [boss-progression, cefr-progression]
+
+acceptance:
+  gameplay:
+    - "game starts and core word interaction works"
+    - "correct and wrong paths behave correctly"
+    - "boss states, victory, defeat and restart remain live"
+  visual:
+    - "Tula/boss presentation does not obscure the learning task"
+  mobile:
+    - "representative small mobile viewport remains playable"
+    - "touch path remains available"
+  technical:
+    - "atomic runtime composition remains coherent"
+    - "no relevant runtime errors or missing required assets"
+  performance:
+    - "no obvious interaction freeze in tested paths"
+  learning:
+    - "language task remains understandable during boss mechanics"
+
+notes:
+  - "Dry run only: no gameplay or design change is requested."
