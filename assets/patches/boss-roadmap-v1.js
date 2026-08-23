@@ -217,9 +217,13 @@
     const current=track.querySelector('.ws-boss-card.current');
     if(!current)return;
     win.requestAnimationFrame(()=>{
-      const target=current.offsetLeft+(current.offsetWidth/2)-(track.clientWidth/2);
-      const max=Math.max(0,track.scrollWidth-track.clientWidth);
-      track.scrollLeft=Math.max(0,Math.min(max,target));
+      const trackRect=track.getBoundingClientRect();
+      const currentRect=current.getBoundingClientRect();
+      const delta=(currentRect.left+currentRect.width/2)-(trackRect.left+trackRect.width/2);
+      const previousSnap=track.style.scrollSnapType;
+      track.style.scrollSnapType='none';
+      track.scrollLeft+=delta;
+      win.requestAnimationFrame(()=>{track.style.scrollSnapType=previousSnap;});
     });
   }
 
