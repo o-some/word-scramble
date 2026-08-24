@@ -1,0 +1,23 @@
+template_version: "1.0.0"
+task: "revalidate MasterBrain game pipeline after the separately scoped roadmap-centering repair"
+baseline_sha: "ac594046c99ac63954164fe6da0a89ff92c29cf4"
+allowed:
+  - ".masterbrain/**"
+protected:
+  - "index.html"
+  - "runtime/**"
+  - "assets/**"
+  - "tests/**"
+  - ".github/workflows/**"
+  - "HANDOFF.md"
+rules:
+  refactor_outside_scope: false
+  force_push: false
+  direct_main_write: false
+  preserve_existing_gameplay: true
+  preserve_tests: true
+plan_deviation_requires_review: true
+historical_context:
+  blocked_dry_run_pr: 42
+  repair_pr: 43
+  repaired_issue: "ROADMAP-CENTER-L6"
