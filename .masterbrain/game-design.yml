@@ -1,0 +1,30 @@
+template_version: "1.0.0"
+project: "Tula's Island – Word Scramble"
+repository: "o-some/word-scramble"
+baseline_sha: "ac594046c99ac63954164fe6da0a89ff92c29cf4"
+mode: "dry-run-revalidation"
+game:
+  genre: "language word/sentence puzzle with boss encounters"
+  audience: "language learners"
+  platform: [web, mobile]
+  input: [touch, pointer]
+learning:
+  objective: "Translate German prompts into English through ordered word/letter interaction while boss mechanics raise challenge without obscuring the language task."
+  source_language: "de"
+  target_language: "en"
+core_loop:
+  - "read challenge"
+  - "compose answer"
+  - "receive immediate feedback"
+  - "earn progression/rewards"
+  - "enter boss encounter after progression threshold"
+states: [start, playing, correct, wrong, pause, boss_intro, boss_playing, victory, defeat, restart]
+visual:
+  brand_world: "Tula's Island"
+  existing_assets_first: true
+  mobile_first: true
+acceptance:
+  gameplay: "existing gameplay remains unchanged in this documentation-only revalidation"
+  technical: "revision-bound runtime-contract, syntax and cold-start browser smoke pass on the repaired main baseline"
+  mobile: "browser mobile viewports show no automated regression; real-device testing is not claimed"
+  release: "documentation-only branch; no production merge required for dry-run success"
