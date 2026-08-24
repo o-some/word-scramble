@@ -6,6 +6,7 @@ const index = read('index.html');
 const base = read('runtime/base.html');
 const composition = read('assets/runtime-composition.js');
 const roadmap = read('assets/patches/boss-roadmap-v1.js');
+const campaignStars = read('assets/patches/boss-campaign-stars.js');
 const abilities13 = read('assets/patches/boss-abilities-1-3-runtime.js');
 const lifecycleBridge = read('assets/patches/boss-intro-lifecycle-bridge.js');
 const abilities46 = read('assets/patches/boss-abilities-4-6.js');
@@ -15,7 +16,7 @@ const sentences = read('assets/patches/variable-boss-words.js');
 const rarities = read('assets/patches/word-rarities.js');
 const progression = read('assets/patches/boss-progression-core.js');
 
-assert.match(index, /const RELEASE='20260823-runtime-v10'/, 'production entrypoint must own the current explicit runtime release');
+assert.match(index, /const RELEASE='20260824-runtime-v11'/, 'production entrypoint must own the current explicit runtime release');
 assert.match(index, /window\.__WS_RUNTIME_RELEASE__=RELEASE/, 'runtime release must be globally shared');
 assert.match(index, /\.\/runtime\/base\.html\?v='\+encodeURIComponent\(RELEASE\)/, 'base runtime must inherit the release');
 assert.match(index, /assets\/runtime-composition\.js/, 'atomic runtime composition must be the production entrypoint');
@@ -78,6 +79,10 @@ assert.match(roadmap, /const trackRect=track\.getBoundingClientRect\(\)/, 'curre
 assert.match(roadmap, /const currentRect=current\.getBoundingClientRect\(\)/, 'current boss centering must measure the current card');
 assert.match(roadmap, /track\.scrollLeft\+=delta/, 'current boss centering must correct the roadmap scroll container by measured delta');
 assert.match(roadmap, /showBossIntro\(doc,idx\+1,false\)/, 'roadmap boss cards must open boss info directly');
+assert.doesNotMatch(campaignStars, /track\.innerHTML\s*=\s*['"]['"]/, 'campaign stars must decorate roadmap cards instead of rebuilding them');
+assert.doesNotMatch(campaignStars, /scroll-snap-align\s*:\s*start/, 'campaign stars must not override authoritative roadmap centering');
+assert.doesNotMatch(campaignStars, /track\.scrollLeft\s*=/, 'campaign stars must not own roadmap scroll position');
+assert.match(campaignStars, /classList\.toggle\('ws-campaign-defeated'/, 'campaign stars must decorate the authoritative roadmap in place');
 
 for (const label of ['STANDARD-WORT','BRONZE-WORT','SILBER-WORT','GOLD-WORT','EPISCHES WORT']) assert.ok(rarities.includes(label), `rarity label missing: ${label}`);
 
