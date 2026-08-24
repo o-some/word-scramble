@@ -1,0 +1,34 @@
+template_version: "1.0.0"
+candidate_branch: "masterbrain/game-pipeline-dry-run-revalidate"
+baseline_sha: "ac594046c99ac63954164fe6da0a89ff92c29cf4"
+viewports:
+  - {name: "small-phone", width: 375, height: 667}
+  - {name: "modern-phone", width: 390, height: 844}
+  - {name: "desktop", width: 1440, height: 900}
+paths:
+  - start
+  - correct_answer
+  - wrong_answer
+  - pause_resume
+  - boss_transition
+  - boss_intro_start
+  - boss_gameplay
+  - post_boss_return
+  - campaign_progression
+  - restart
+runtime_checks:
+  - "runtime source-of-truth contract"
+  - "critical patch syntax"
+  - "cold-start Selenium browser smoke"
+inputs: [touch_intent, pointer]
+regression_focus:
+  - "boss level 6 current roadmap card remains centered"
+  - "campaign stars do not own roadmap rendering or scroll position"
+capability_labels:
+  real_device: "NOT TESTED"
+  browser_mobile_viewport: "TESTED BY CI WHEN WORKFLOW PASSES"
+  desktop_browser: "TESTED BY CI WHEN WORKFLOW PASSES"
+release_gate:
+  build_only_is_gameplay_pass: false
+  critical_blockers_override_score: true
+  revision_bound_ci_required: true
