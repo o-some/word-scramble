@@ -38,7 +38,7 @@ def wait(driver, predicate, timeout=8, message="condition"):
 
 def assert_atomic_release(driver):
     release = driver.execute_script("return String(window.parent.__WS_RUNTIME_RELEASE__||'')")
-    assert release == '20260823-runtime-v10', f"unexpected runtime release: {release!r}"
+    assert release == '20260824-runtime-v11', f"unexpected runtime release: {release!r}"
     wait(driver, lambda d: d.execute_script("return window.parent.document.documentElement.dataset.wsRuntimeComposition==='ready'"), 8, "atomic runtime composition")
     sources = driver.execute_script("""
       return [...window.parent.document.scripts]
@@ -283,7 +283,7 @@ def main():
         wait(driver,lambda d:d.execute_script("return !!document.querySelector('.ws-word-rarity-title')"),2.5,"A1 rarity after full C2 restart")
 
         print("Word Scramble boss mechanics + roadmap + full campaign: PASS",flush=True)
-        print("Release: 20260823-runtime-v10",flush=True)
+        print("Release: 20260824-runtime-v11",flush=True)
         print("Boss 1 HP transitions:",observed_hp,flush=True)
         print("Boss mechanics verified: Vargas roaming seal, Ironhook repeated pulls, Thorne 1/2, Corvin foreign decoy, Azrak moving shadow",flush=True)
         print("Current boss roadmap centering/click: PASS",flush=True)
