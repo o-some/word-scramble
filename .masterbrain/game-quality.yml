@@ -1,63 +1,72 @@
 template_version: "1.0.0"
-status: "PENDING_REVISION_BOUND_CI"
+status: "BLOCKED_EXISTING_QA"
 candidate:
   repository: "o-some/word-scramble"
   branch: "masterbrain/game-pipeline-dry-run-revalidate"
   baseline_sha: "ac594046c99ac63954164fe6da0a89ff92c29cf4"
-  workflow_run: null
+  workflow_run: 32679180161
 scores:
   technical_stability:
     weight: 20
     score: 100
     minimum: 95
-    basis: "repaired main plus revision-bound runtime/browser CI; final status waits for candidate run"
+    basis: "runtime source-of-truth and critical patch syntax pass on both candidate attempts"
   mobile_ux:
     weight: 20
     score: 90
     minimum: 90
-    basis: "automated mobile browser viewports only; no real-device claim"
+    basis: "provisional automated-browser assessment only; real-device testing not claimed"
   gameplay:
     weight: 20
     score: 90
     minimum: 85
-    basis: "existing cold-start browser regression covers core and boss progression paths"
+    basis: "provisional only; aggregate score cannot release while the browser gameplay gate is blocked"
   brand_visual_quality:
     weight: 15
     score: 90
     minimum: 90
-    basis: "documentation-only candidate preserves accepted production visuals; no new visual mutation"
+    basis: "documentation-only candidate preserves production visuals"
   learning_value:
     weight: 15
     score: 90
     minimum: 85
-    basis: "learning task and sentence gameplay are unchanged by the dry run and repair"
+    basis: "learning task and sentence gameplay are unchanged by the dry run"
   performance:
     weight: 5
     score: 90
     minimum: 85
-    basis: "browser smoke passes on repaired main; no dedicated performance benchmark claimed"
+    basis: "provisional; no dedicated performance benchmark claimed"
   accessibility_input:
     weight: 5
     score: 85
     minimum: 80
-    basis: "pointer/touch-intent paths remain covered; no real-device accessibility certification"
+    basis: "provisional pointer/touch-intent coverage; no real-device certification"
 overall:
-  score: 92
+  score: null
   minimum: 90
-  critical_blockers: []
-  status: "PENDING_REVISION_BOUND_CI"
+  critical_blockers:
+    - id: "IRONHOOK-SMOKE-SYNC-L6"
+      source: "workflow-run-32679180161-attempts-1-and-2"
+      severity: "critical"
+      state: "open"
+      classification: "qa-harness synchronization race under the intentional Level-6 Ironhook repeated-pull mechanic"
+      reproduction: "Selenium cold-start smoke repeatedly times out waiting for boss feedback after the Enterhaken pulls the final LINE token back out of an otherwise complete sentence."
+      scope_decision: "Do not alter tests or gameplay inside the documentation-only revalidation; use a separate explicitly scoped QA repair branch."
+  status: "BLOCKED_EXISTING_QA"
   reviewer: "MasterBrain/BigBrain dry-run revalidation"
+  reason: "Critical revision-bound browser gate failed twice; aggregate score is not finalizable."
 capability_labels:
   - "AUTOMATED RUNTIME TESTED"
-  - "BROWSER MOBILE VIEWPORT TESTED WHEN CANDIDATE CI PASSES"
-  - "DESKTOP BROWSER TESTED WHEN CANDIDATE CI PASSES"
+  - "BROWSER GAMEPLAY GATE TESTED AND BLOCKED"
   - "REAL DEVICE NOT TESTED"
 evidence_refs:
   - "PR #42 historical blocked dry run"
-  - "PR #43 roadmap centering repair"
+  - "PR #43 roadmap-centering repair"
   - "workflow 32678385289 repair-head regression PASS"
-  - "candidate workflow pending"
+  - "workflow 32679180161 candidate attempt 1 FAIL"
+  - "workflow 32679180161 candidate attempt 2 FAIL"
 notes:
-  - "Score is conservative and capability-limited; it is not a real-device certification."
+  - "The prior ROADMAP-CENTER-L6 blocker is not the current failure."
+  - "Both candidate attempts pass runtime source-of-truth and critical patch syntax before failing the browser gameplay smoke at Level 6."
+  - "The observed failure is consistent with smoke-test timing around the intentional repeated Ironhook pull; this evidence does not claim a real-device product failure."
   - "Critical blockers override aggregate score."
-  - "Final PASS is forbidden until the candidate branch itself receives a successful revision-bound workflow run."
