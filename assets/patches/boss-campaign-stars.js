@@ -25,10 +25,6 @@
     style.textContent=`
       .ws-boss-roadmap{pointer-events:auto!important}
       .ws-boss-roadmap-head .ws-campaign-count{color:#ffe18a!important}
-      .ws-boss-roadmap-track{display:flex!important;grid-template-columns:none!important;gap:5px!important;overflow-x:auto!important;overflow-y:hidden!important;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:1px 1px 2px!important;overscroll-behavior-x:contain}
-      .ws-boss-roadmap-track::-webkit-scrollbar{display:none}
-      .ws-boss-card{flex:0 0 116px!important;width:116px!important;scroll-snap-align:start;cursor:pointer;font:inherit;color:inherit;text-align:left;appearance:none;-webkit-appearance:none}
-      .ws-boss-card:focus-visible{outline:2px solid #fff0a8;outline-offset:1px}
       .ws-boss-card.ws-campaign-defeated{border-color:rgba(255,216,111,.58);background:linear-gradient(160deg,rgba(119,84,25,.26),rgba(16,70,73,.14));box-shadow:inset 0 0 0 1px rgba(255,216,111,.08)}
       .ws-boss-stars{display:block;margin-top:2px;color:#ffe18a;font-size:.26rem;line-height:1;letter-spacing:.02em;text-shadow:0 1px 3px rgba(0,0,0,.6)}
       .ws-boss-card .ws-defeated-mark{background:#7a641f!important;color:#fff0bd!important}
@@ -42,7 +38,7 @@
       .ws-boss-dossier-status{display:inline-flex;align-items:center;min-height:26px;padding:0 9px;border-radius:999px;border:1px solid rgba(112,217,173,.30);background:rgba(5,70,74,.28);color:#d8eeee;font-size:.48rem;font-weight:950;margin-bottom:10px}
       .ws-boss-dossier-ability{padding:11px 12px;border:1px solid rgba(239,199,102,.36);border-radius:16px;background:rgba(255,255,255,.045);text-align:left}.ws-boss-dossier-ability small{display:block;color:#efc766;font-size:.46rem;font-weight:1000;letter-spacing:.10em}.ws-boss-dossier-ability b{display:block;margin:4px 0;color:#fff0bd;font-size:.82rem}.ws-boss-dossier-ability p{margin:0;color:#d8eeee;font-size:.62rem;font-weight:700;line-height:1.42}
       .ws-boss-dossier-stars{margin:10px 0 8px;color:#ffe18a;font-size:1rem;letter-spacing:.05em}.ws-boss-dossier-close{width:100%;min-height:48px;border:1px solid #fff0a8;border-radius:15px;background:linear-gradient(#ffe895,#e3b13d 55%,#b97418);box-shadow:0 4px 0 #75430e;color:#092f4b;font-weight:1000;font-size:.72rem;cursor:pointer}
-      @media(max-width:430px){.ws-boss-card{flex-basis:104px!important;width:104px!important}.ws-boss-stars{font-size:.22rem}.ws-boss-card.current .ws-boss-stars{font-size:.23rem}.ws-star-rules{font-size:.41rem;padding:6px 7px;margin-bottom:9px}.ws-boss-dossier-card{padding:14px 13px 13px;border-radius:22px}.ws-boss-dossier-portrait{height:122px}.ws-boss-dossier-portrait img{max-width:132px;max-height:132px}}
+      @media(max-width:430px){.ws-boss-stars{font-size:.22rem}.ws-boss-card.current .ws-boss-stars{font-size:.23rem}.ws-star-rules{font-size:.41rem;padding:6px 7px;margin-bottom:9px}.ws-boss-dossier-card{padding:14px 13px 13px;border-radius:22px}.ws-boss-dossier-portrait{height:122px}.ws-boss-dossier-portrait img{max-width:132px;max-height:132px}}
       @media(prefers-reduced-motion:reduce){.ws-boss-dossier,.ws-boss-dossier-card{scroll-behavior:auto!important}}
     `;
     doc.head.appendChild(style);
@@ -86,7 +82,7 @@
       ensureStyles(doc);ensureStarRules(doc);
       const roadmap=doc.querySelector('.ws-boss-roadmap');
       if(!roadmap)return;
-      const level=currentLevel(win,doc),active=bossActive(win,doc),stars=readStars(win);
+      const level=currentLevel(win,doc),stars=readStars(win);
       const defeated=Object.values(stars).filter(v=>Number(v)>0).length;
       const head=roadmap.querySelector('.ws-boss-roadmap-head span:first-child');
       if(head){head.classList.add('ws-campaign-count');head.textContent='☠ BOSS-KAMPAGNE · '+defeated+'/10';}
@@ -94,37 +90,25 @@
       if(status)status.textContent='ANTIPPEN FÜR INFO';
       const track=roadmap.querySelector('.ws-boss-roadmap-track');
       if(!track)return;
-      const wanted=bosses.map((_,i)=>i+1);
-      const existing=Array.from(track.querySelectorAll('.ws-boss-card')).map(c=>Number(c.dataset.level||0));
-      const signature=level+':'+active+':'+wanted.map(lvl=>Math.max(0,Math.min(3,Number(stars[lvl]||0)))).join(',');
-      const needsRebuild=existing.length!==wanted.length||existing.some((v,i)=>v!==wanted[i])||roadmap.dataset.wsCampaignSignature!==signature;
-      if(needsRebuild){
-        const oldScroll=track.scrollLeft;
-        const previousLevel=Number(roadmap.dataset.wsCampaignLevel||0);
-        track.innerHTML='';
-        wanted.forEach(lvl=>{
-          const boss=bosses[lvl-1];if(!boss)return;
-          const best=Math.max(0,Math.min(3,Number(stars[lvl]||0))),current=lvl===level;
-          const card=doc.createElement('button');
-          card.type='button';
-          card.dataset.level=String(lvl);
-          card.className='ws-boss-card'+(current?' current':'')+(best?' ws-campaign-defeated':'');
-          card.setAttribute('aria-label','Level '+lvl+' '+boss.name+' – Boss-Dossier öffnen');
-          const mark=current?'<em>'+(active?'AKTUELL':'NÄCHSTER')+'</em>':(best?'<em class="ws-defeated-mark">✓</em>':'');
-          const starLine=best?'<span class="ws-boss-stars" aria-label="'+best+' von 3 Sternen">'+'★'.repeat(best)+'☆'.repeat(3-best)+'</span>':'<span class="ws-boss-stars">☆☆☆</span>';
-          card.innerHTML='<img src="'+boss.sprite+'" alt=""><div class="ws-boss-card-copy"><b>LEVEL '+lvl+'</b><small>'+boss.name+'</small>'+starLine+'</div>'+mark;
-          card.addEventListener('click',()=>showDossier(lvl));
-          track.appendChild(card);
-        });
-        roadmap.dataset.wsCampaignSignature=signature;
-        roadmap.dataset.wsCampaignLevel=String(level);
-        if(previousLevel!==level){
-          const currentCard=track.querySelector('.ws-boss-card.current');
-          if(currentCard){track.scrollLeft=Math.max(0,currentCard.offsetLeft-(track.clientWidth-currentCard.offsetWidth)/2);}
-        }else{
-          track.scrollLeft=oldScroll;
+      const cards=Array.from(track.querySelectorAll('.ws-boss-card'));
+      if(cards.length!==bosses.length)return;
+      roadmap.dataset.wsCampaignLevel=String(level);
+      cards.forEach(card=>{
+        const lvl=Math.max(1,Math.min(10,Number(card.dataset.level)||1));
+        const best=Math.max(0,Math.min(3,Number(stars[lvl]||0)));
+        card.classList.toggle('ws-campaign-defeated',best>0);
+        const copy=card.querySelector('.ws-boss-card-copy');
+        if(copy){
+          let starLine=copy.querySelector('.ws-boss-stars');
+          if(!starLine){starLine=doc.createElement('span');starLine.className='ws-boss-stars';copy.appendChild(starLine);}
+          starLine.textContent=best?'★'.repeat(best)+'☆'.repeat(3-best):'☆☆☆';
+          if(best)starLine.setAttribute('aria-label',best+' von 3 Sternen');else starLine.removeAttribute('aria-label');
         }
-      }
+        const current=card.classList.contains('current');
+        const defeatedMark=card.querySelector('.ws-defeated-mark');
+        if(best&&!current&&!defeatedMark){const mark=doc.createElement('em');mark.className='ws-defeated-mark';mark.textContent='✓';card.appendChild(mark);}
+        else if((!best||current)&&defeatedMark)defeatedMark.remove();
+      });
     }catch(err){console.warn('Word Scramble campaign roadmap skipped',err)}
   }
   function installRuntime(doc){
