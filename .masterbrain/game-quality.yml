@@ -1,0 +1,38 @@
+template_version: "1.0.0"
+status: "BLOCKED_EXISTING_QA"
+candidate_branch: "masterbrain/game-pipeline-dry-run"
+baseline_sha: "23c3c71734d8cf950ed15e1a6b92e257f4d6258b"
+weights:
+  technical_stability: 20
+  mobile_ux: 20
+  gameplay: 20
+  brand_visual_quality: 15
+  learning_value: 15
+  performance: 5
+  accessibility_input: 5
+thresholds:
+  overall: 90
+  technical_stability: 95
+  mobile_ux: 90
+  gameplay: 85
+  brand_visual_quality: 90
+  learning_value: 85
+  performance: 85
+  accessibility_input: 80
+critical_blockers:
+  - id: "ROADMAP-CENTER-L6"
+    source: "workflow-run-32634271548"
+    severity: "critical"
+    state: "open"
+    reproduction: "Selenium cold-start browser smoke repeatedly times out waiting for the current boss roadmap card to be centered at boss level 6."
+    scope_decision: "Do not repair in documentation-only dry run; requires a separate explicitly scoped gameplay/roadmap repair branch."
+score:
+  overall: null
+  reason: "Not finalized while a critical automated gameplay/visual-layout gate is failing."
+capability_honesty:
+  automated_runtime_browser_ci: "TESTED"
+  real_device: "NOT TESTED"
+  local_agent_browser: "NOT AVAILABLE"
+notes:
+  - "Dry-run diff changes only .masterbrain/** and introduces no gameplay/runtime/test/workflow mutation."
+  - "Critical blockers override aggregate score."

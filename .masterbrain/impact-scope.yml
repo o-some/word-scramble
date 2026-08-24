@@ -1,0 +1,19 @@
+template_version: "1.0.0"
+task: "validate MasterBrain game pipeline without gameplay changes"
+baseline_sha: "23c3c71734d8cf950ed15e1a6b92e257f4d6258b"
+allowed:
+  - ".masterbrain/**"
+protected:
+  - "index.html"
+  - "runtime/**"
+  - "assets/**"
+  - "tests/**"
+  - ".github/workflows/**"
+  - "HANDOFF.md"
+rules:
+  refactor_outside_scope: false
+  force_push: false
+  direct_main_write: false
+  preserve_existing_gameplay: true
+  preserve_tests: true
+plan_deviation_requires_review: true
