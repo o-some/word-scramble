@@ -1,0 +1,63 @@
+template_version: "1.0.0"
+status: "PENDING_REVISION_BOUND_CI"
+candidate:
+  repository: "o-some/word-scramble"
+  branch: "masterbrain/game-pipeline-dry-run-revalidate"
+  baseline_sha: "ac594046c99ac63954164fe6da0a89ff92c29cf4"
+  workflow_run: null
+scores:
+  technical_stability:
+    weight: 20
+    score: 100
+    minimum: 95
+    basis: "repaired main plus revision-bound runtime/browser CI; final status waits for candidate run"
+  mobile_ux:
+    weight: 20
+    score: 90
+    minimum: 90
+    basis: "automated mobile browser viewports only; no real-device claim"
+  gameplay:
+    weight: 20
+    score: 90
+    minimum: 85
+    basis: "existing cold-start browser regression covers core and boss progression paths"
+  brand_visual_quality:
+    weight: 15
+    score: 90
+    minimum: 90
+    basis: "documentation-only candidate preserves accepted production visuals; no new visual mutation"
+  learning_value:
+    weight: 15
+    score: 90
+    minimum: 85
+    basis: "learning task and sentence gameplay are unchanged by the dry run and repair"
+  performance:
+    weight: 5
+    score: 90
+    minimum: 85
+    basis: "browser smoke passes on repaired main; no dedicated performance benchmark claimed"
+  accessibility_input:
+    weight: 5
+    score: 85
+    minimum: 80
+    basis: "pointer/touch-intent paths remain covered; no real-device accessibility certification"
+overall:
+  score: 92
+  minimum: 90
+  critical_blockers: []
+  status: "PENDING_REVISION_BOUND_CI"
+  reviewer: "MasterBrain/BigBrain dry-run revalidation"
+capability_labels:
+  - "AUTOMATED RUNTIME TESTED"
+  - "BROWSER MOBILE VIEWPORT TESTED WHEN CANDIDATE CI PASSES"
+  - "DESKTOP BROWSER TESTED WHEN CANDIDATE CI PASSES"
+  - "REAL DEVICE NOT TESTED"
+evidence_refs:
+  - "PR #42 historical blocked dry run"
+  - "PR #43 roadmap centering repair"
+  - "workflow 32678385289 repair-head regression PASS"
+  - "candidate workflow pending"
+notes:
+  - "Score is conservative and capability-limited; it is not a real-device certification."
+  - "Critical blockers override aggregate score."
+  - "Final PASS is forbidden until the candidate branch itself receives a successful revision-bound workflow run."
